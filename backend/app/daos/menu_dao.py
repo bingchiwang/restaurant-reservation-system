@@ -81,3 +81,61 @@ class MenuDAO:
             """, (item_id,))
             row = cursor.fetchone()
             return dict(row) if row else None
+
+    def get_category_by_id(self, category_id):
+        """
+        Retrieves a single category by category_id.
+        """
+        with get_db_cursor(self.conn) as cursor:
+            cursor.execute("""
+                SELECT category_id, name, status, sort_order
+                FROM menu_categories
+                WHERE category_id = ?
+            """, (category_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def create_item(self, category_id, name, description, price, is_available=1, image_url=None):
+        """
+        Creates a new menu item.
+        """
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute("""
+                INSERT INTO menu_items (category_id, name, description, price, is_available, image_url)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (category_id, name.strip(), description, price, 1 if is_available else 0, image_url))
+            return cursor.lastrowid
+
+    def update_item(self, item_id, fields: dict):
+        """
+        Updates fields of a menu item dynamically.
+        Allowed fields: category_id, name, description, price, is_available, image_url
+        """
+        allowed = {"category_id", "name", "description", "price", "is_available", "image_url"}
+        update_cols = []
+        params = []
+        for k, v in fields.items():
+            if k in allowed:
+                update_cols.append(f"{k} = ?")
+                params.append(v)
+
+        if not update_cols:
+            return False
+
+        params.append(item_id)
+        sql = f"UPDATE menu_items SET {', '.join(update_cols)}, updated_at = CURRENT_TIMESTAMP WHERE item_id = ?"
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute(sql, tuple(params))
+            return cursor.rowcount > 0
+
+    def update_availability(self, item_id, is_available: bool):
+        """
+        Quickly toggles/updates availability (shelf on/off).
+        """
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute("""
+                UPDATE menu_items
+                SET is_available = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE item_id = ?
+            """, (1 if is_available else 0, item_id))
+            return cursor.rowcount > 0

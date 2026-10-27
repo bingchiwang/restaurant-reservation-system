@@ -49,3 +49,43 @@ class MenuFacade:
         finally:
             if not self._external_conn:
                 conn.close()
+
+    def create_menu_item(self, category_id, name, description, price, is_available=True, image_url=None):
+        """
+        Admin: Creates a new menu item.
+        """
+        conn, service = self._get_service()
+        try:
+            return service.create_menu_item(
+                category_id=category_id,
+                name=name,
+                description=description,
+                price=price,
+                is_available=is_available,
+                image_url=image_url
+            )
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def update_menu_item(self, item_id, fields: dict):
+        """
+        Admin: Updates an existing menu item.
+        """
+        conn, service = self._get_service()
+        try:
+            return service.update_menu_item(item_id, fields)
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def update_item_availability(self, item_id, is_available: bool):
+        """
+        Admin: Sets availability of an item.
+        """
+        conn, service = self._get_service()
+        try:
+            return service.update_item_availability(item_id, is_available)
+        finally:
+            if not self._external_conn:
+                conn.close()

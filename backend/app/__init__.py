@@ -26,7 +26,11 @@ def create_app(config_class=Config):
 
     # Register Blueprints
     from backend.app.controllers.menu_controller import menu_bp
+    from backend.app.controllers.admin_menu_controller import admin_menu_bp
+    from backend.app.controllers.auth_controller import auth_bp
     app.register_blueprint(menu_bp)
+    app.register_blueprint(admin_menu_bp)
+    app.register_blueprint(auth_bp)
 
     # Global Error Handlers
     @app.errorhandler(404)
