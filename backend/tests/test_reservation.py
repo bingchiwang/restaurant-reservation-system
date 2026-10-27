@@ -220,7 +220,7 @@ def test_get_reservation_by_code(client, seed_tables):
     })
     code = res.get_json()["data"]["reservation_code"]
 
-    query_res = client.get(f"/api/v1/reservations/{code}")
+    query_res = client.get(f"/api/v1/reservations/{code}?phone=0911000111")
     assert query_res.status_code == 200
     q_data = query_res.get_json()["data"]
     assert q_data["reservation_code"] == code

@@ -13,7 +13,6 @@ def create_reservation():
     
     party_size = data.get("party_size")
     reservation_time = data.get("reservation_time")
-    # Support separate date and time fields if provided
     if not reservation_time and data.get("reservation_date") and data.get("start_time"):
         reservation_time = f"{data['reservation_date'].strip()} {data['start_time'].strip()}"
 
@@ -58,18 +57,60 @@ def create_reservation():
 @reservation_bp.route("/<string:reservation_code>", methods=["GET"])
 def get_reservation(reservation_code):
     """
-    REQ-004: 查詢預約 (基礎公開查詢端點，後續搭配電話身分驗證)
+    REQ-004: 查詢預約 (支援電話驗證，避免任意猜測編號)
     """
+    phone = request.args.get("phone")
     facade = ReservationFacade()
-    res = facade.get_reservation_by_code(reservation_code)
-    if not res:
+    try:
+        res = facade.get_reservation_by_code(reservation_code, phone=phone, is_admin=False)
+        if not res:
+            return jsonify({
+                "success": False,
+                "error": "RESERVATION_NOT_FOUND",
+                "message": f"Reservation {reservation_code} not found"
+            }), 404
+        return jsonify({
+            "success": True,
+            "data": res
+        }), 200
+    except PermissionError as e:
+        return jsonify({
+            "success": False,
+            "error": "FORBIDDEN",
+            "message": str(e)
+        }), 403
+
+@reservation_bp.route("/<string:reservation_code>/cancel", methods=["POST"])
+def cancel_reservation(reservation_code):
+    """
+    REQ-004: 顧客取消預約
+    """
+    data = request.get_json() or {}
+    phone = data.get("phone")
+
+    facade = ReservationFacade()
+    try:
+        cancelled = facade.cancel_reservation(reservation_code, phone=phone, is_admin=False)
+        return jsonify({
+            "success": True,
+            "message": "Reservation has been successfully cancelled",
+            "data": cancelled
+        }), 200
+    except LookupError as e:
         return jsonify({
             "success": False,
             "error": "RESERVATION_NOT_FOUND",
-            "message": f"Reservation {reservation_code} not found"
+            "message": str(e)
         }), 404
-
-    return jsonify({
-        "success": True,
-        "data": res
-    }), 200
+    except PermissionError as e:
+        return jsonify({
+            "success": False,
+            "error": "FORBIDDEN",
+            "message": str(e)
+        }), 403
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": "BAD_REQUEST",
+            "message": str(e)
+        }), 400

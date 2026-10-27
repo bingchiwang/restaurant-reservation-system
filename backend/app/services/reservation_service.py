@@ -41,7 +41,6 @@ class ReservationService:
         try:
             if "T" in reservation_time_str:
                 start_dt = datetime.fromisoformat(reservation_time_str.replace("Z", "+00:00"))
-                # Strip timezone for local comparison
                 start_dt = start_dt.replace(tzinfo=None)
             elif len(reservation_time_str.strip()) == 16:
                 start_dt = datetime.strptime(reservation_time_str.strip(), "%Y-%m-%d %H:%M")
@@ -75,37 +74,22 @@ class ReservationService:
         return party_size, start_dt
 
     def calculate_end_time(self, start_dt: datetime) -> datetime:
-        """
-        Calculates end time including meal duration and cleaning buffer.
-        """
         meal_duration = getattr(self.config, "MEAL_DURATION_MINUTES", 90)
         cleaning_buffer = getattr(self.config, "CLEANING_BUFFER_MINUTES", 15)
         return start_dt + timedelta(minutes=meal_duration + cleaning_buffer)
 
     def generate_reservation_code(self, start_dt: datetime) -> str:
-        """
-        Generates unique human-readable reservation code: RES-YYYYMMDD-XXXX
-        """
         date_str = start_dt.strftime("%Y%m%d")
         random_suffix = uuid.uuid4().hex[:6].upper()
         return f"RES-{date_str}-{random_suffix}"
 
     def select_best_table(self, party_size: int, start_dt: datetime, end_dt: datetime):
-        """
-        REQ-003: 桌位自動分配演算法
-        1. 排除非使用中桌位 (status != 'ACTIVE')
-        2. 排除時段重疊衝突之桌位
-        3. 排除容量不足 (capacity < party_size)
-        4. 優先選擇剩餘座位較少 (capacity - party_size 最小化)
-        5. 多張合適時依 table_id 升冪排序
-        """
         start_str = start_dt.strftime("%Y-%m-%d %H:%M:%S")
         end_str = end_dt.strftime("%Y-%m-%d %H:%M:%S")
 
         all_active_tables = self.table_dao.get_all_tables(status="ACTIVE")
         conflicting_ids = self.table_dao.get_conflicting_table_ids(start_str, end_str)
 
-        # Filter candidates
         candidates = [
             t for t in all_active_tables
             if t["table_id"] not in conflicting_ids and t["capacity"] >= party_size
@@ -114,14 +98,10 @@ class ReservationService:
         if not candidates:
             return None
 
-        # Sort candidates: (wasted_capacity, table_id)
         candidates.sort(key=lambda t: (t["capacity"] - party_size, t["table_id"]))
         return candidates[0]
 
     def create_guest_reservation(self, party_size, reservation_time_str, guest_name, guest_phone, note=None):
-        """
-        REQ-002 & REQ-003: 訪客預約完整交易流程
-        """
         party_size, start_dt = self.validate_reservation_input(
             party_size=party_size,
             reservation_time_str=reservation_time_str,
@@ -133,16 +113,13 @@ class ReservationService:
         start_str = start_dt.strftime("%Y-%m-%d %H:%M:%S")
         end_str = end_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        # Transaction Boundary
         try:
-            # Table allocation check inside transaction
             best_table = self.select_best_table(party_size, start_dt, end_dt)
             if not best_table:
                 raise NoAvailableTableError("No available table for the selected party size and time slot")
 
             res_code = self.generate_reservation_code(start_dt)
             
-            # 1. Insert reservation
             res_id = self.reservation_dao.create_reservation(
                 reservation_code=res_code,
                 user_id=None,
@@ -152,14 +129,12 @@ class ReservationService:
                 status="CONFIRMED"
             )
 
-            # 2. Insert guest contact
             self.reservation_dao.create_guest_contact(
                 reservation_id=res_id,
                 guest_name=guest_name,
                 guest_phone=guest_phone
             )
 
-            # 3. Associate table
             self.reservation_dao.assign_table(
                 reservation_id=res_id,
                 table_id=best_table["table_id"]
@@ -170,3 +145,100 @@ class ReservationService:
         except Exception:
             self.conn.rollback()
             raise
+
+    def get_reservation_with_auth(self, reservation_code: str, phone: str = None, user_id: int = None, is_admin: bool = False):
+        """
+        REQ-004: 憑預約編號與身分核對查詢預約，防止任意猜測號碼窺探他人個資
+        """
+        res = self.reservation_dao.get_by_code(reservation_code)
+        if not res:
+            return None
+
+        if is_admin:
+            return res
+
+        # Check guest phone or member user_id
+        if res.get("user_id"):
+            if user_id != res["user_id"]:
+                raise PermissionError("Access denied: Not authorized to view this reservation")
+        else:
+            if not phone or str(phone).strip() != str(res.get("guest_phone")).strip():
+                raise PermissionError("Verification failed: Phone number does not match reservation contact")
+
+        return res
+
+    def cancel_reservation(self, reservation_code: str, phone: str = None, user_id: int = None, is_admin: bool = False):
+        """
+        REQ-004: 顧客取消預約（1 小時前限制、釋放座位）
+        """
+        res = self.get_reservation_with_auth(reservation_code, phone=phone, user_id=user_id, is_admin=is_admin)
+        if not res:
+            raise LookupError(f"Reservation {reservation_code} not found")
+
+        current_status = res.get("status")
+        if current_status == "CANCELLED":
+            raise ValueError("Reservation has already been cancelled")
+        if current_status == "COMPLETED":
+            raise ValueError("Completed reservations cannot be cancelled")
+
+        # Check 1-hour cancellation limit for non-admin
+        if not is_admin:
+            start_str = res["start_at"]
+            if isinstance(start_str, str):
+                start_dt = datetime.strptime(start_str[:19], "%Y-%m-%d %H:%M:%S")
+            else:
+                start_dt = start_str
+
+            now = datetime.now()
+            if start_dt - now < timedelta(hours=1):
+                raise ValueError("Reservations cannot be cancelled within 1 hour of meal time online. Please contact the restaurant.")
+
+        self.reservation_dao.update_status(res["reservation_id"], "CANCELLED")
+        return self.reservation_dao.get_by_id(res["reservation_id"])
+
+    # Admin Methods (REQ-012)
+    def admin_list_reservations(self, date_str=None, status=None, limit=50, offset=0):
+        return self.reservation_dao.list_reservations(date_str=date_str, status=status, limit=limit, offset=offset)
+
+    def admin_update_status(self, reservation_id: int, new_status: str):
+        valid_statuses = {"PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"}
+        if new_status not in valid_statuses:
+            raise ValueError(f"Invalid status: {new_status}. Allowed: {valid_statuses}")
+
+        res = self.reservation_dao.get_by_id(reservation_id)
+        if not res:
+            raise LookupError(f"Reservation {reservation_id} not found")
+
+        self.reservation_dao.update_status(reservation_id, new_status)
+        return self.reservation_dao.get_by_id(reservation_id)
+
+    def admin_change_table(self, reservation_id: int, new_table_id: int):
+        res = self.reservation_dao.get_by_id(reservation_id)
+        if not res:
+            raise LookupError(f"Reservation {reservation_id} not found")
+
+        if res["status"] == "CANCELLED":
+            raise ValueError("Cannot assign table to a cancelled reservation")
+
+        all_tables = {t["table_id"]: t for t in self.table_dao.get_all_tables(status=None)}
+        if new_table_id not in all_tables:
+            raise ValueError(f"Table {new_table_id} does not exist")
+
+        target_table = all_tables[new_table_id]
+        if target_table["status"] != "ACTIVE":
+            raise ValueError(f"Table {new_table_id} is currently {target_table['status']}")
+
+        if target_table["capacity"] < res["party_size"]:
+            raise ValueError(f"Table capacity ({target_table['capacity']}) is insufficient for party size ({res['party_size']})")
+
+        # Conflict check
+        conflicts = self.table_dao.get_conflicting_table_ids(
+            start_at=str(res["start_at"])[:19],
+            end_at=str(res["end_at"])[:19],
+            exclude_reservation_id=reservation_id
+        )
+        if new_table_id in conflicts:
+            raise ValueError(f"Table {new_table_id} has a scheduling conflict with another reservation")
+
+        self.reservation_dao.update_assigned_table(reservation_id, new_table_id)
+        return self.reservation_dao.get_by_id(reservation_id)

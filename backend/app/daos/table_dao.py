@@ -25,21 +25,27 @@ class TableDAO:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
-    def get_conflicting_table_ids(self, start_at: str, end_at: str):
+    def get_conflicting_table_ids(self, start_at: str, end_at: str, exclude_reservation_id: int = None):
         """
         Retrieves table IDs that have active (non-cancelled) reservations
         overlapping with [start_at, end_at).
-        Overlap condition: r.start_at < end_at AND r.end_at > start_at
+        Optionally excludes a specific reservation_id.
         """
+        query = """
+            SELECT DISTINCT rt.table_id
+            FROM reservation_tables rt
+            JOIN reservations r ON rt.reservation_id = r.reservation_id
+            WHERE r.status != 'CANCELLED'
+              AND r.start_at < ?
+              AND r.end_at > ?
+        """
+        params = [end_at, start_at]
+        if exclude_reservation_id:
+            query += " AND r.reservation_id != ?"
+            params.append(exclude_reservation_id)
+
         with get_db_cursor(self.conn) as cursor:
-            cursor.execute("""
-                SELECT DISTINCT rt.table_id
-                FROM reservation_tables rt
-                JOIN reservations r ON rt.reservation_id = r.reservation_id
-                WHERE r.status != 'CANCELLED'
-                  AND r.start_at < ?
-                  AND r.end_at > ?
-            """, (end_at, start_at))
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
             return set(row["table_id"] if isinstance(row, dict) else row[0] for row in rows)
 
