@@ -1,0 +1,36 @@
+import os
+from flask import Flask, jsonify
+from flask_cors import CORS
+from backend.config import Config
+from backend.app.utils.db import get_connection, init_sqlite_db
+
+def create_app(config_class=Config):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+    CORS(app)
+
+    # Initialize SQLite database if needed
+    if app.config.get("DB_TYPE") == "sqlite":
+        conn = get_connection(config_class)
+        init_sqlite_db(conn)
+        conn.close()
+
+    # Health check route
+    @app.route("/api/v1/health", methods=["GET"])
+    def health_check():
+        return jsonify({
+            "status": "healthy",
+            "version": "1.0.0",
+            "system": "Restaurant Reservation & Ordering System"
+        }), 200
+
+    # Global Error Handlers
+    @app.errorhandler(404)
+    def handle_not_found(e):
+        return jsonify({"code": "NOT_FOUND", "message": "Resource not found"}), 404
+
+    @app.errorhandler(500)
+    def handle_server_error(e):
+        return jsonify({"code": "SERVER_ERROR", "message": "An internal error occurred"}), 500
+
+    return app
