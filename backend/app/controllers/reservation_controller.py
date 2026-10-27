@@ -19,6 +19,7 @@ def create_reservation():
     guest_name = data.get("guest_name")
     guest_phone = data.get("guest_phone")
     note = data.get("note")
+    items = data.get("items")
 
     if party_size is None or not reservation_time or not guest_name or not guest_phone:
         return jsonify({
@@ -34,7 +35,8 @@ def create_reservation():
             reservation_time=reservation_time,
             guest_name=guest_name,
             guest_phone=guest_phone,
-            note=note
+            note=note,
+            items=items
         )
         return jsonify({
             "success": True,

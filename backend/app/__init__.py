@@ -30,11 +30,15 @@ def create_app(config_class=Config):
     from backend.app.controllers.auth_controller import auth_bp
     from backend.app.controllers.reservation_controller import reservation_bp
     from backend.app.controllers.admin_reservation_controller import admin_reservation_bp
+    from backend.app.controllers.order_controller import order_bp
+    from backend.app.controllers.admin_order_controller import admin_order_bp
     app.register_blueprint(menu_bp)
     app.register_blueprint(admin_menu_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(reservation_bp)
     app.register_blueprint(admin_reservation_bp)
+    app.register_blueprint(order_bp)
+    app.register_blueprint(admin_order_bp)
 
     # Global Error Handlers
     @app.errorhandler(404)

@@ -101,7 +101,10 @@ class ReservationService:
         candidates.sort(key=lambda t: (t["capacity"] - party_size, t["table_id"]))
         return candidates[0]
 
-    def create_guest_reservation(self, party_size, reservation_time_str, guest_name, guest_phone, note=None):
+    def create_guest_reservation(self, party_size, reservation_time_str, guest_name, guest_phone, note=None, items=None):
+        """
+        REQ-002, REQ-003 & REQ-006: 訪客預約（可包含預約時預點餐原子交易）
+        """
         party_size, start_dt = self.validate_reservation_input(
             party_size=party_size,
             reservation_time_str=reservation_time_str,
@@ -112,6 +115,15 @@ class ReservationService:
         end_dt = self.calculate_end_time(start_dt)
         start_str = start_dt.strftime("%Y-%m-%d %H:%M:%S")
         end_str = end_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        from backend.app.services.order_service import OrderService
+        order_svc = OrderService(self.conn)
+
+        # Pre-validate items if pre-ordering
+        validated_items = None
+        total_amount = None
+        if items:
+            total_amount, validated_items = order_svc.calculate_and_validate_items(items)
 
         try:
             best_table = self.select_best_table(party_size, start_dt, end_dt)
@@ -140,8 +152,33 @@ class ReservationService:
                 table_id=best_table["table_id"]
             )
 
+            order_data = None
+            if items and validated_items:
+                order_id = order_svc.order_dao.create_order(
+                    user_id=None,
+                    reservation_id=res_id,
+                    table_id=best_table["table_id"],
+                    order_type="PRE_ORDER",
+                    status="PENDING",
+                    total_amount=float(total_amount)
+                )
+                for vi in validated_items:
+                    order_svc.order_dao.create_order_item(
+                        order_id=order_id,
+                        item_id=vi["item_id"],
+                        item_name_snapshot=vi["item_name_snapshot"],
+                        quantity=vi["quantity"],
+                        unit_price=float(vi["unit_price"]),
+                        subtotal=float(vi["subtotal"]),
+                        note=vi["note"]
+                    )
+                order_data = order_svc.get_order_details(order_id)
+
             self.conn.commit()
-            return self.reservation_dao.get_by_code(res_code)
+            result = self.reservation_dao.get_by_code(res_code)
+            if order_data:
+                result["pre_order"] = order_data
+            return result
         except Exception:
             self.conn.rollback()
             raise

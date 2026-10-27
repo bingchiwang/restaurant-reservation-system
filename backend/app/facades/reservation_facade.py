@@ -16,7 +16,7 @@ class ReservationFacade:
         service = ReservationService(conn, config)
         return conn, service
 
-    def create_guest_reservation(self, party_size, reservation_time, guest_name, guest_phone, note=None):
+    def create_guest_reservation(self, party_size, reservation_time, guest_name, guest_phone, note=None, items=None):
         conn, service = self._get_service()
         try:
             return service.create_guest_reservation(
@@ -24,7 +24,8 @@ class ReservationFacade:
                 reservation_time_str=reservation_time,
                 guest_name=guest_name,
                 guest_phone=guest_phone,
-                note=note
+                note=note,
+                items=items
             )
         finally:
             if not self._external_conn:
