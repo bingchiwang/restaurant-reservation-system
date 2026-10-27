@@ -24,6 +24,10 @@ def create_app(config_class=Config):
             "system": "Restaurant Reservation & Ordering System"
         }), 200
 
+    # Register Blueprints
+    from backend.app.controllers.menu_controller import menu_bp
+    app.register_blueprint(menu_bp)
+
     # Global Error Handlers
     @app.errorhandler(404)
     def handle_not_found(e):

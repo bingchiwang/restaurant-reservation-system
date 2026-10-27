@@ -32,4 +32,4 @@ class Config:
 class TestingConfig(Config):
     TESTING = True
     DB_TYPE = "sqlite"
-    SQLITE_PATH = ":memory:"
+    SQLITE_PATH = "file:restaurant_test?mode=memory&cache=shared"

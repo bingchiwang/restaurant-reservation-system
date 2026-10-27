@@ -10,26 +10,36 @@ except ImportError:
     pymysql = None
     DictCursor = None
 
+def _get_conf(config, key, default=None):
+    if hasattr(config, key):
+        return getattr(config, key)
+    if isinstance(config, dict) or hasattr(config, "get"):
+        return config.get(key, default)
+    return default
+
 def get_connection(config_class=Config):
     """
     Returns a database connection based on config.
     Supports MySQL (PyMySQL) and SQLite.
     """
-    if config_class.DB_TYPE == "mysql":
+    db_type = _get_conf(config_class, "DB_TYPE", "sqlite")
+    if db_type == "mysql":
         if pymysql is None:
             raise ImportError("PyMySQL is not installed. Please install pymysql or set DB_TYPE=sqlite")
         return pymysql.connect(
-            host=config_class.MYSQL_HOST,
-            port=config_class.MYSQL_PORT,
-            user=config_class.MYSQL_USER,
-            password=config_class.MYSQL_PASSWORD,
-            database=config_class.MYSQL_DATABASE,
+            host=_get_conf(config_class, "MYSQL_HOST", "127.0.0.1"),
+            port=int(_get_conf(config_class, "MYSQL_PORT", 3306)),
+            user=_get_conf(config_class, "MYSQL_USER", "root"),
+            password=_get_conf(config_class, "MYSQL_PASSWORD", ""),
+            database=_get_conf(config_class, "MYSQL_DATABASE", "restaurant_db"),
             cursorclass=DictCursor,
             autocommit=False
         )
     else:
         # SQLite
-        conn = sqlite3.connect(config_class.SQLITE_PATH, check_same_thread=False)
+        sqlite_path = _get_conf(config_class, "SQLITE_PATH", "restaurant_dev.db")
+        is_uri = sqlite_path.startswith("file:")
+        conn = sqlite3.connect(sqlite_path, uri=is_uri, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         # Enable foreign key support in SQLite
         conn.execute("PRAGMA foreign_keys = ON;")
@@ -39,8 +49,42 @@ def get_connection(config_class=Config):
 def get_db_cursor(conn, commit=False):
     """
     Context manager for database cursor with automatic transaction handling.
+    Wraps execute to support '?' placeholders across both SQLite and MySQL.
     """
-    cursor = conn.cursor()
+    raw_cursor = conn.cursor()
+    is_mysql = pymysql is not None and isinstance(conn, pymysql.connections.Connection)
+
+    class CursorWrapper:
+        def __init__(self, cur, is_mysql):
+            self._cur = cur
+            self._is_mysql = is_mysql
+
+        def execute(self, sql, params=None):
+            if self._is_mysql and params is not None:
+                # Replace '?' with '%s' for MySQL compatibility
+                sql = sql.replace("?", "%s")
+            if params is None:
+                return self._cur.execute(sql)
+            return self._cur.execute(sql, params)
+
+        def fetchone(self):
+            return self._cur.fetchone()
+
+        def fetchall(self):
+            return self._cur.fetchall()
+
+        def close(self):
+            return self._cur.close()
+
+        @property
+        def lastrowid(self):
+            return self._cur.lastrowid
+
+        @property
+        def rowcount(self):
+            return self._cur.rowcount
+
+    cursor = CursorWrapper(raw_cursor, is_mysql)
     try:
         yield cursor
         if commit:
