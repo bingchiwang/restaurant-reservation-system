@@ -13,6 +13,7 @@ def list_orders():
     status = request.args.get("status")
     reservation_id = request.args.get("reservation_id")
     table_id = request.args.get("table_id")
+    date_str = request.args.get("date")
     limit = int(request.args.get("limit", 50))
     offset = int(request.args.get("offset", 0))
 
@@ -21,6 +22,7 @@ def list_orders():
         status=status,
         reservation_id=int(reservation_id) if reservation_id else None,
         table_id=int(table_id) if table_id else None,
+        date_str=date_str,
         limit=limit,
         offset=offset
     )

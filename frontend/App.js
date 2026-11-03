@@ -13,6 +13,7 @@ import MenuScreen from './src/screens/MenuScreen';
 import ReservationScreen from './src/screens/ReservationScreen';
 import CartScreen from './src/screens/CartScreen';
 import ReservationLookupScreen from './src/screens/ReservationLookupScreen';
+import AdminScreen from './src/screens/AdminScreen';
 
 function MainApp() {
   const [currentTab, setCurrentTab] = useState('menu');
@@ -30,6 +31,8 @@ function MainApp() {
         return <CartScreen onNavigateToReservation={() => setCurrentTab('reservation')} />;
       case 'lookup':
         return <ReservationLookupScreen />;
+      case 'admin':
+        return <AdminScreen />;
       default:
         return <MenuScreen onNavigateToCart={() => setCurrentTab('cart')} />;
     }
@@ -96,6 +99,16 @@ function MainApp() {
             <Text style={styles.tabIcon}>🔍</Text>
             <Text style={[styles.tabText, currentTab === 'lookup' && styles.tabTextActive]}>
               查詢預約
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, currentTab === 'admin' && styles.tabItemActive]}
+            onPress={() => setCurrentTab('admin')}
+          >
+            <Text style={styles.tabIcon}>⚙️</Text>
+            <Text style={[styles.tabText, currentTab === 'admin' && styles.tabTextActive]}>
+              管理後台
             </Text>
           </TouchableOpacity>
         </View>

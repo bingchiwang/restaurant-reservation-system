@@ -147,8 +147,12 @@ class OrderService:
         self.order_dao.update_order_status(order_id, new_status)
         return self.get_order_details(order_id)
 
-    def list_orders(self, status=None, reservation_id=None, table_id=None, limit=50, offset=0):
-        orders = self.order_dao.list_orders(status=status, reservation_id=reservation_id, table_id=table_id, limit=limit, offset=offset)
+    def list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, limit=50, offset=0):
+        orders = self.order_dao.list_orders(status=status, reservation_id=reservation_id, table_id=table_id, date_str=date_str, limit=limit, offset=offset)
         for o in orders:
             o["total_amount"] = float(o["total_amount"])
+            o["items"] = self.order_dao.get_order_items(o["order_id"])
+            for it in o["items"]:
+                it["unit_price"] = float(it["unit_price"])
+                it["subtotal"] = float(it["subtotal"])
         return orders

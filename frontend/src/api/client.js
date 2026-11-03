@@ -62,3 +62,47 @@ export const OrderAPI = {
   },
   getOrder: (orderId) => request(`/orders/${orderId}`)
 };
+
+export const AuthAPI = {
+  login: (email, password) => {
+    return request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+  }
+};
+
+export const AdminAPI = {
+  getReservations: (token, date = null, status = null) => {
+    let query = [];
+    if (date) query.push(`date=${encodeURIComponent(date)}`);
+    if (status) query.push(`status=${encodeURIComponent(status)}`);
+    const qStr = query.length ? `?${query.join("&")}` : "";
+    return request(`/admin/reservations${qStr}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+  updateReservationStatus: (token, reservationId, newStatus) => {
+    return request(`/admin/reservations/${reservationId}/status`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: newStatus })
+    });
+  },
+  getOrders: (token, date = null, status = null) => {
+    let query = [];
+    if (date) query.push(`date=${encodeURIComponent(date)}`);
+    if (status) query.push(`status=${encodeURIComponent(status)}`);
+    const qStr = query.length ? `?${query.join("&")}` : "";
+    return request(`/admin/orders${qStr}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+  updateOrderStatus: (token, orderId, newStatus) => {
+    return request(`/admin/orders/${orderId}/status`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: newStatus })
+    });
+  }
+};

@@ -69,7 +69,7 @@ class OrderDAO:
             """, (new_status, order_id))
             return cursor.rowcount > 0
 
-    def list_orders(self, status=None, reservation_id=None, table_id=None, limit=50, offset=0):
+    def list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, limit=50, offset=0):
         query = """
             SELECT 
                 o.order_id,
@@ -95,8 +95,11 @@ class OrderDAO:
         if table_id:
             query += " AND o.table_id = ?"
             params.append(table_id)
+        if date_str:
+            query += " AND DATE(o.created_at) = DATE(?)"
+            params.append(date_str)
 
-        query += " ORDER BY o.order_id DESC LIMIT ? OFFSET ?"
+        query += " ORDER BY o.created_at DESC, o.order_id DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
         with get_db_cursor(self.conn) as cursor:
