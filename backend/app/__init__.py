@@ -16,6 +16,16 @@ def create_app(config_class=Config):
         conn.close()
 
     # Health check route
+    @app.route("/", methods=["GET"])
+    def root_info():
+        return jsonify({
+            "status": "healthy",
+            "version": "1.0.0",
+            "system": "Restaurant Reservation & Ordering System",
+            "frontend_web": "http://127.0.0.1:8080",
+            "api_docs": "/api/v1"
+        }), 200
+
     @app.route("/api/v1/health", methods=["GET"])
     def health_check():
         return jsonify({
