@@ -1,27 +1,38 @@
 @echo off
-chcp 65001 >nul
-title 餐廳預約系統 - 一鍵啟動 (前後端)
-
-echo ========================================================
-echo        餐廳預約與點餐系統 - 一鍵啟動精靈
-echo ========================================================
-echo.
-
+setlocal
 cd /d "%~dp0"
 
-echo [1/2] 正在啟動後端 API 伺服器 (Flask: http://127.0.0.1:5000)...
-start "餐廳後端 API (Flask:5000)" cmd /k "chcp 65001 >nul && cd backend && call venv\Scripts\activate && python run.py"
+echo ========================================================
+echo   Restaurant Reservation System - Quick Launcher
+echo ========================================================
+echo.
 
-timeout /t 2 /nobreak >nul
+set "EXPO_NO_TELEMETRY=true"
 
-echo [2/2] 正在啟動前端網頁伺服器 (Expo Web: http://localhost:8081)...
-start "餐廳前端網頁 (Expo Web)" cmd /k "chcp 65001 >nul && cd frontend && npm run web"
+:: 1. Build web bundle if not present
+if not exist "frontend\dist\index.html" (
+    echo [*] Generating web build, please wait a moment...
+    cd frontend
+    call npx expo export -p web
+    cd ..
+)
+
+echo [1/2] Starting Backend API Server (Flask: http://127.0.0.1:5000)...
+start "Restaurant Backend API" cmd /k "cd /d "%~dp0backend" && call venv\Scripts\activate && python run.py"
+
+echo [2/2] Starting Frontend Web Server (http://127.0.0.1:8080)...
+start "Restaurant Frontend Web" cmd /k "cd /d "%~dp0frontend\dist" && ..\..\backend\venv\Scripts\python.exe -m http.server 8080"
+
+timeout /t 3 /nobreak >nul
+
+echo Opening browser at http://127.0.0.1:8080 ...
+start http://127.0.0.1:8080
 
 echo.
 echo ========================================================
-echo  已在獨立視窗中成功啟動後端與前端網頁！
-echo  - 後端 API: http://127.0.0.1:5000
-echo  - 前端網頁: http://localhost:8081 (將自動於瀏覽器開啟)
+echo  System is running!
+echo  - Frontend Web: http://127.0.0.1:8080
+echo  - Backend API:  http://127.0.0.1:5000
 echo ========================================================
 echo.
 pause
