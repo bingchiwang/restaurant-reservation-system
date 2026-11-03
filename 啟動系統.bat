@@ -21,7 +21,7 @@ echo [1/2] Starting Backend API Server (Flask: http://127.0.0.1:5000)...
 start "Restaurant Backend API" cmd /k "cd /d "%~dp0backend" && call venv\Scripts\activate && python run.py"
 
 echo [2/2] Starting Frontend Web Server (http://127.0.0.1:8080)...
-start "Restaurant Frontend Web" cmd /k "cd /d "%~dp0frontend\dist" && ..\..\backend\venv\Scripts\python.exe -m http.server 8080"
+start "Restaurant Frontend Web" cmd /k "cd /d "%~dp0frontend\dist_web" && ..\..\backend\venv\Scripts\python.exe -m http.server 8080"
 
 timeout /t 3 /nobreak >nul
 
