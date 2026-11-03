@@ -15,5 +15,9 @@ seed_data()
 app = create_app()
 
 if __name__ == "__main__":
-    print("[*] Restaurant Backend API running at http://127.0.0.1:5000")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    print("[*] Restaurant Backend API running at http://127.0.0.1:5000 (Production WSGI: Waitress)")
+    try:
+        from waitress import serve
+        serve(app, host="127.0.0.1", port=5000, threads=6)
+    except ImportError:
+        app.run(host="127.0.0.1", port=5000, debug=False)
