@@ -4,7 +4,8 @@ import {
   Text,
   View,
   SafeAreaView,
-  TouchableOpacity
+  TouchableOpacity,
+  useWindowDimensions
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { CartProvider, useCart } from './src/context/CartContext';
@@ -16,6 +17,8 @@ import ReservationLookupScreen from './src/screens/ReservationLookupScreen';
 function MainApp() {
   const [currentTab, setCurrentTab] = useState('menu');
   const { totalCount } = useCart();
+  const { width } = useWindowDimensions();
+  const isWebWide = width > 768;
 
   const renderScreen = () => {
     switch (currentTab) {
@@ -33,67 +36,69 @@ function MainApp() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.outerContainer}>
       <StatusBar style="dark" />
-      {/* Top Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>餐廳預約與點餐系統</Text>
-        <Text style={styles.headerSubtitle}>優質美味 ‧ 線上即時預約</Text>
-      </View>
+      <View style={[styles.container, isWebWide && styles.webContainer]}>
+        {/* Top Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>餐廳預約與點餐系統</Text>
+          <Text style={styles.headerSubtitle}>優質美味 ‧ 線上即時預約</Text>
+        </View>
 
-      {/* Screen Body */}
-      <View style={styles.body}>
-        {renderScreen()}
-      </View>
+        {/* Screen Body */}
+        <View style={styles.body}>
+          {renderScreen()}
+        </View>
 
-      {/* Bottom Navigation Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'menu' && styles.tabItemActive]}
-          onPress={() => setCurrentTab('menu')}
-        >
-          <Text style={styles.tabIcon}>🍽️</Text>
-          <Text style={[styles.tabText, currentTab === 'menu' && styles.tabTextActive]}>
-            美味菜單
-          </Text>
-        </TouchableOpacity>
+        {/* Bottom Navigation Bar */}
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, currentTab === 'menu' && styles.tabItemActive]}
+            onPress={() => setCurrentTab('menu')}
+          >
+            <Text style={styles.tabIcon}>🍽️</Text>
+            <Text style={[styles.tabText, currentTab === 'menu' && styles.tabTextActive]}>
+              美味菜單
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'reservation' && styles.tabItemActive]}
-          onPress={() => setCurrentTab('reservation')}
-        >
-          <Text style={styles.tabIcon}>📅</Text>
-          <Text style={[styles.tabText, currentTab === 'reservation' && styles.tabTextActive]}>
-            線上預約
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, currentTab === 'reservation' && styles.tabItemActive]}
+            onPress={() => setCurrentTab('reservation')}
+          >
+            <Text style={styles.tabIcon}>📅</Text>
+            <Text style={[styles.tabText, currentTab === 'reservation' && styles.tabTextActive]}>
+              線上預約
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'cart' && styles.tabItemActive]}
-          onPress={() => setCurrentTab('cart')}
-        >
-          <View style={styles.cartIconWrapper}>
-            <Text style={styles.tabIcon}>🛒</Text>
-            {totalCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{totalCount > 99 ? '99+' : totalCount}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={[styles.tabText, currentTab === 'cart' && styles.tabTextActive]}>
-            購物車
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, currentTab === 'cart' && styles.tabItemActive]}
+            onPress={() => setCurrentTab('cart')}
+          >
+            <View style={styles.cartIconWrapper}>
+              <Text style={styles.tabIcon}>🛒</Text>
+              {totalCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{totalCount > 99 ? '99+' : totalCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.tabText, currentTab === 'cart' && styles.tabTextActive]}>
+              購物車
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, currentTab === 'lookup' && styles.tabItemActive]}
-          onPress={() => setCurrentTab('lookup')}
-        >
-          <Text style={styles.tabIcon}>🔍</Text>
-          <Text style={[styles.tabText, currentTab === 'lookup' && styles.tabTextActive]}>
-            查詢預約
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, currentTab === 'lookup' && styles.tabItemActive]}
+            onPress={() => setCurrentTab('lookup')}
+          >
+            <Text style={styles.tabIcon}>🔍</Text>
+            <Text style={[styles.tabText, currentTab === 'lookup' && styles.tabTextActive]}>
+              查詢預約
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -108,12 +113,28 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: '#f1f3f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     flex: 1,
+    width: '100%',
     backgroundColor: '#ffffff',
   },
+  webContainer: {
+    maxWidth: 640,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
   header: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
@@ -121,12 +142,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1d3557',
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6c757d',
     marginTop: 2,
   },
@@ -135,7 +156,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    height: 60,
+    height: 62,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#dee2e6',
@@ -151,11 +172,11 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   tabIcon: {
-    fontSize: 18,
+    fontSize: 20,
     marginBottom: 2,
   },
   tabText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#6c757d',
     fontWeight: '500',
   },
@@ -169,7 +190,7 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -4,
-    right: -10,
+    right: -12,
     backgroundColor: '#e63946',
     borderRadius: 9,
     minWidth: 18,
