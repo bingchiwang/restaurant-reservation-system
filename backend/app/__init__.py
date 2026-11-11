@@ -16,16 +16,6 @@ def create_app(config_class=Config):
         conn.close()
 
     # Health check route
-    @app.route("/", methods=["GET"])
-    def root_info():
-        return jsonify({
-            "status": "healthy",
-            "version": "1.0.0",
-            "system": "Restaurant Reservation & Ordering System",
-            "frontend_web": "http://127.0.0.1:8080",
-            "api_docs": "/api/v1"
-        }), 200
-
     @app.route("/api/v1/health", methods=["GET"])
     def health_check():
         return jsonify({
@@ -42,6 +32,11 @@ def create_app(config_class=Config):
     from backend.app.controllers.admin_reservation_controller import admin_reservation_bp
     from backend.app.controllers.order_controller import order_bp
     from backend.app.controllers.admin_order_controller import admin_order_bp
+    from backend.app.controllers.system_controller import system_bp
+    from backend.app.controllers.admin_system_controller import admin_system_bp
+    from backend.app.controllers.admin_table_controller import admin_table_bp
+    from backend.app.controllers.admin_web_controller import admin_web_bp
+    from backend.app.controllers.web_controller import web_bp
     app.register_blueprint(menu_bp)
     app.register_blueprint(admin_menu_bp)
     app.register_blueprint(auth_bp)
@@ -49,6 +44,11 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_reservation_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(admin_order_bp)
+    app.register_blueprint(system_bp)
+    app.register_blueprint(admin_system_bp)
+    app.register_blueprint(admin_table_bp)
+    app.register_blueprint(admin_web_bp)
+    app.register_blueprint(web_bp)
 
     # Global Error Handlers
     @app.errorhandler(404)

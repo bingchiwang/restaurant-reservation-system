@@ -139,3 +139,12 @@ class MenuDAO:
                 WHERE item_id = ?
             """, (1 if is_available else 0, item_id))
             return cursor.rowcount > 0
+
+    def create_category(self, name: str, status: str = "ACTIVE", sort_order: int = 0):
+        """Creates a new menu category."""
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute("""
+                INSERT INTO menu_categories (name, status, sort_order)
+                VALUES (?, ?, ?)
+            """, (name.strip(), status, sort_order))
+            return cursor.lastrowid

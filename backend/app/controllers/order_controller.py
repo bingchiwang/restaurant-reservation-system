@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from backend.app.facades.order_facade import OrderFacade
+from backend.app.utils.exceptions import FeatureDisabledError
 
 order_bp = Blueprint("order", __name__, url_prefix="/api/v1/orders")
 
@@ -27,6 +28,12 @@ def create_order():
             "message": "Order created successfully",
             "data": order
         }), 201
+    except FeatureDisabledError as e:
+        return jsonify({
+            "success": False,
+            "error": "SERVICE_PAUSED",
+            "message": str(e)
+        }), 403
     except ValueError as e:
         return jsonify({
             "success": False,

@@ -9,19 +9,51 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { CartProvider, useCart } from './src/context/CartContext';
+import { SystemConfigProvider, useSystemConfig } from './src/context/SystemConfigContext';
 import MenuScreen from './src/screens/MenuScreen';
 import ReservationScreen from './src/screens/ReservationScreen';
 import CartScreen from './src/screens/CartScreen';
 import ReservationLookupScreen from './src/screens/ReservationLookupScreen';
-import AdminScreen from './src/screens/AdminScreen';
 
 function MainApp() {
   const [currentTab, setCurrentTab] = useState('menu');
   const { totalCount } = useCart();
+  const { config, refreshConfig } = useSystemConfig();
   const { width } = useWindowDimensions();
   const isWebWide = width > 768;
 
+  const getAnnouncementStyle = (type) => {
+    switch (type) {
+      case 'danger':
+        return { bg: '#f8d7da', border: '#f5c2c7', text: '#842029' };
+      case 'warning':
+        return { bg: '#fff3cd', border: '#ffecb5', text: '#664d03' };
+      default:
+        return { bg: '#cff4fc', border: '#b6effb', text: '#055160' };
+    }
+  };
+
   const renderScreen = () => {
+    if (config.store_status === 'MAINTENANCE') {
+      return (
+        <View style={styles.maintenanceContainer}>
+          <Text style={styles.maintenanceIcon}>🛠️</Text>
+          <Text style={styles.maintenanceTitle}>系統維護中</Text>
+          <Text style={styles.maintenanceDesc}>
+            餐廳目前正在進行系統維護與調整，暫停線上預約及點餐功能。請稍後再試。
+          </Text>
+          {config.announcement_text ? (
+            <View style={styles.maintNoticeBox}>
+              <Text style={styles.maintNoticeText}>公告：{config.announcement_text}</Text>
+            </View>
+          ) : null}
+          <TouchableOpacity style={styles.retryBtn} onPress={refreshConfig}>
+            <Text style={styles.retryBtnText}>🔄 重新檢查系統狀態</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     switch (currentTab) {
       case 'menu':
         return <MenuScreen onNavigateToCart={() => setCurrentTab('cart')} />;
@@ -31,12 +63,12 @@ function MainApp() {
         return <CartScreen onNavigateToReservation={() => setCurrentTab('reservation')} />;
       case 'lookup':
         return <ReservationLookupScreen />;
-      case 'admin':
-        return <AdminScreen />;
       default:
         return <MenuScreen onNavigateToCart={() => setCurrentTab('cart')} />;
     }
   };
+
+  const annStyle = getAnnouncementStyle(config.announcement_type);
 
   return (
     <SafeAreaView style={styles.outerContainer}>
@@ -45,15 +77,36 @@ function MainApp() {
         {/* Top Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>餐廳預約與點餐系統</Text>
-          <Text style={styles.headerSubtitle}>優質美味 ‧ 線上即時預約</Text>
+          <Text style={styles.headerSubtitle}>
+            營業時間 {config.opening_time} ~ {config.closing_time} ‧{' '}
+            {config.store_status === 'OPEN' ? '🟢 營業中' : config.store_status === 'CLOSED' ? '🟡 休息中' : '🔴 維護中'}
+          </Text>
         </View>
+
+        {/* Backend Controlled Closed Banner */}
+        {config.store_status === 'CLOSED' && (
+          <View style={styles.closedBanner}>
+            <Text style={styles.closedBannerText}>
+              🌙 本店目前休息中／非營業時段，暫停新預約與線上點餐
+            </Text>
+          </View>
+        )}
+
+        {/* Backend Controlled Announcement Banner */}
+        {config.store_status !== 'MAINTENANCE' && config.announcement_text ? (
+          <View style={[styles.annBanner, { backgroundColor: annStyle.bg, borderBottomColor: annStyle.border }]}>
+            <Text style={[styles.annText, { color: annStyle.text }]}>
+              📢 {config.announcement_text}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Screen Body */}
         <View style={styles.body}>
           {renderScreen()}
         </View>
 
-        {/* Bottom Navigation Bar */}
+        {/* Bottom Navigation Bar (Pure Customer Tabs - Admin Removed) */}
         <View style={styles.tabBar}>
           <TouchableOpacity
             style={[styles.tabItem, currentTab === 'menu' && styles.tabItemActive]}
@@ -101,16 +154,6 @@ function MainApp() {
               查詢預約
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabItem, currentTab === 'admin' && styles.tabItemActive]}
-            onPress={() => setCurrentTab('admin')}
-          >
-            <Text style={styles.tabIcon}>⚙️</Text>
-            <Text style={[styles.tabText, currentTab === 'admin' && styles.tabTextActive]}>
-              管理後台
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -119,9 +162,11 @@ function MainApp() {
 
 export default function App() {
   return (
-    <CartProvider>
-      <MainApp />
-    </CartProvider>
+    <SystemConfigProvider>
+      <CartProvider>
+        <MainApp />
+      </CartProvider>
+    </SystemConfigProvider>
   );
 }
 
@@ -164,8 +209,79 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     marginTop: 2,
   },
+  closedBanner: {
+    backgroundColor: '#fff3cd',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffecb5',
+  },
+  closedBannerText: {
+    color: '#664d03',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  annBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  annText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   body: {
     flex: 1,
+  },
+  maintenanceContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 28,
+    backgroundColor: '#f8f9fa',
+  },
+  maintenanceIcon: {
+    fontSize: 56,
+    marginBottom: 14,
+  },
+  maintenanceTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1d3557',
+    marginBottom: 8,
+  },
+  maintenanceDesc: {
+    fontSize: 14,
+    color: '#495057',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  maintNoticeBox: {
+    backgroundColor: '#fff3cd',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 18,
+    width: '100%',
+  },
+  maintNoticeText: {
+    color: '#664d03',
+    fontSize: 13,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  retryBtn: {
+    backgroundColor: '#1d3557',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   tabBar: {
     flexDirection: 'row',

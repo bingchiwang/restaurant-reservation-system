@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from backend.config import Config
 from backend.app.daos.table_dao import TableDAO
 from backend.app.daos.reservation_dao import ReservationDAO
+from backend.app.daos.system_dao import SystemDAO
+from backend.app.utils.exceptions import FeatureDisabledError
 
 class NoAvailableTableError(Exception):
     """Raised when no suitable table is available."""
@@ -14,6 +16,7 @@ class ReservationService:
         self.config = config
         self.table_dao = TableDAO(conn)
         self.reservation_dao = ReservationDAO(conn)
+        self.system_dao = SystemDAO(conn)
 
     def validate_reservation_input(self, party_size, reservation_time_str, guest_name=None, guest_phone=None, is_guest=True):
         """
@@ -61,9 +64,10 @@ class ReservationService:
         if start_dt > now + timedelta(days=max_days):
             raise ValueError(f"Reservations can only be made within {max_days} days in advance")
 
-        # 5. Business Hours Check
-        opening_str = getattr(self.config, "OPENING_TIME", "11:00")
-        closing_str = getattr(self.config, "CLOSING_TIME", "21:30")
+        # 5. Business Hours Check (read from backend store settings)
+        settings = self.system_dao.get_settings()
+        opening_str = settings.get("opening_time") or getattr(self.config, "OPENING_TIME", "11:00")
+        closing_str = settings.get("closing_time") or getattr(self.config, "CLOSING_TIME", "21:30")
         
         opening_time = datetime.strptime(opening_str, "%H:%M").time()
         closing_time = datetime.strptime(closing_str, "%H:%M").time()
@@ -105,6 +109,17 @@ class ReservationService:
         """
         REQ-002, REQ-003 & REQ-006: 訪客預約（可包含預約時預點餐原子交易）
         """
+        settings = self.system_dao.get_settings()
+        store_status = settings.get("store_status", "OPEN")
+        if store_status == "MAINTENANCE":
+            raise FeatureDisabledError("系統維護中，暫停線上預約服務")
+        if store_status == "CLOSED":
+            raise FeatureDisabledError("本店目前休息中，暫停線上預約")
+        if not settings.get("reservations_enabled", 1):
+            raise FeatureDisabledError("線上預約功能目前已由後端管理員暫停")
+        if items and (not settings.get("pre_order_enabled", 1) or not settings.get("ordering_enabled", 1)):
+            raise FeatureDisabledError("預約預點餐功能目前已由後端管理員暫停")
+
         party_size, start_dt = self.validate_reservation_input(
             party_size=party_size,
             reservation_time_str=reservation_time_str,
@@ -234,8 +249,30 @@ class ReservationService:
         return self.reservation_dao.get_by_id(res["reservation_id"])
 
     # Admin Methods (REQ-012)
-    def admin_list_reservations(self, date_str=None, status=None, limit=50, offset=0):
-        return self.reservation_dao.list_reservations(date_str=date_str, status=status, limit=limit, offset=offset)
+    def admin_list_reservations(self, date_str=None, status=None, sort_order="asc", limit=50, offset=0):
+        return self.reservation_dao.list_reservations(
+            date_str=date_str,
+            status=status,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+        )
+
+    def admin_update_reservation(self, reservation_id: int, fields: dict):
+        """Updates reservation status and/or table_id with full validation."""
+        if not isinstance(fields, dict):
+            raise ValueError("Invalid update payload")
+
+        if "status" in fields and fields["status"]:
+            self.admin_update_status(reservation_id, str(fields["status"]).strip().upper())
+
+        if "table_id" in fields and fields["table_id"] is not None:
+            self.admin_change_table(reservation_id, int(fields["table_id"]))
+
+        res = self.reservation_dao.get_by_id(reservation_id)
+        if not res:
+            raise LookupError(f"Reservation {reservation_id} not found")
+        return res
 
     def admin_update_status(self, reservation_id: int, new_status: str):
         valid_statuses = {"PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"}

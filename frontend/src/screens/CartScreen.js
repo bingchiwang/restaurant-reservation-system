@@ -4,23 +4,34 @@ import {
   Text,
   View,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   Alert,
   ActivityIndicator
 } from 'react-native';
 import { useCart } from '../context/CartContext';
+import { useSystemConfig } from '../context/SystemConfigContext';
 import { OrderAPI } from '../api/client';
 
 export default function CartScreen({ onNavigateToReservation }) {
   const { cartItems, updateQuantity, removeItem, clearCart, totalAmount, totalCount } = useCart();
+  const { config } = useSystemConfig();
   const [tableNumber, setTableNumber] = useState('');
   const [ordering, setOrdering] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(null);
 
+  const canOrder = config.store_status === 'OPEN' && config.ordering_enabled;
+  const canPreOrder = config.store_status === 'OPEN' && config.reservations_enabled && config.pre_order_enabled && config.ordering_enabled;
+  const activeTables = config.active_tables || [];
+
   const handleDineInOrder = async () => {
+    if (!canOrder) {
+      Alert.alert('暫停點餐', '目前餐廳暫停現場點餐服務');
+      return;
+    }
     if (!tableNumber.trim()) {
-      Alert.alert('請輸入桌號', '請輸入現場桌位編號或掃描桌位 QR Code');
+      Alert.alert('請選擇或輸入桌號', '請點選您的桌位或輸入桌位編號');
       return;
     }
     const tableId = parseInt(tableNumber.trim(), 10);
@@ -121,30 +132,61 @@ export default function CartScreen({ onNavigateToReservation }) {
         </View>
 
         {/* Option 1: Link with Online Reservation */}
-        <TouchableOpacity style={styles.reserveButton} onPress={onNavigateToReservation}>
-          <Text style={styles.reserveButtonText}>📅 預約訂位並附帶預點餐</Text>
+        <TouchableOpacity
+          style={[styles.reserveButton, !canPreOrder && styles.disabledBtn]}
+          onPress={onNavigateToReservation}
+          disabled={!canPreOrder}
+        >
+          <Text style={styles.reserveButtonText}>
+            {canPreOrder ? "📅 預約訂位並附帶預點餐" : "📅 預約預點餐目前暫停中"}
+          </Text>
         </TouchableOpacity>
 
         {/* Option 2: Dine-in Table Instant Order */}
         <View style={styles.dineInBox}>
-          <Text style={styles.dineInLabel}>現場已就坐？輸入桌號即刻送單：</Text>
+          <Text style={styles.dineInLabel}>
+            {canOrder ? "現場已就坐？點選桌位或輸入桌號送單：" : "⚠️ 目前餐廳暫停現場點餐服務"}
+          </Text>
+
+          {activeTables.length > 0 && canOrder && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableChipsRow}>
+              {activeTables.map(t => {
+                const selected = tableNumber === String(t.table_id);
+                return (
+                  <TouchableOpacity
+                    key={t.table_id}
+                    style={[styles.tableChip, selected && styles.tableChipActive]}
+                    onPress={() => setTableNumber(String(t.table_id))}
+                  >
+                    <Text style={[styles.tableChipText, selected && styles.tableChipTextActive]}>
+                      {t.table_name} (#{t.table_id})
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
           <View style={styles.dineInInputRow}>
             <TextInput
               style={styles.tableInput}
-              placeholder="桌號 (例: 1)"
+              placeholder="桌號 ID (例: 1)"
               keyboardType="number-pad"
               value={tableNumber}
               onChangeText={setTableNumber}
+              editable={canOrder}
             />
             <TouchableOpacity
-              style={[styles.dineInButton, ordering && styles.disabledBtn]}
+              style={[styles.dineInButton, (ordering || !canOrder) && styles.disabledBtn]}
               onPress={handleDineInOrder}
-              disabled={ordering}
+              disabled={ordering || !canOrder}
             >
               {ordering ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <Text style={styles.dineInButtonText}>送出現場點餐</Text>
+                <Text style={styles.dineInButtonText}>
+                  {canOrder ? "送出現場點餐" : "暫停點餐"}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -267,6 +309,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6c757d',
     marginBottom: 6,
+  },
+  tableChipsRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  tableChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    marginRight: 6,
+  },
+  tableChipActive: {
+    backgroundColor: '#1d3557',
+    borderColor: '#1d3557',
+  },
+  tableChipText: {
+    fontSize: 12,
+    color: '#495057',
+    fontWeight: '600',
+  },
+  tableChipTextActive: {
+    color: '#ffffff',
   },
   dineInInputRow: {
     flexDirection: 'row',

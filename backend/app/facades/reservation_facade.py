@@ -57,10 +57,20 @@ class ReservationFacade:
             if not self._external_conn:
                 conn.close()
 
-    def admin_list_reservations(self, date_str=None, status=None, limit=50, offset=0):
+    def admin_list_reservations(self, date_str=None, status=None, sort_order="asc", limit=50, offset=0):
         conn, service = self._get_service()
         try:
-            return service.admin_list_reservations(date_str=date_str, status=status, limit=limit, offset=offset)
+            return service.admin_list_reservations(
+                date_str=date_str, status=status, sort_order=sort_order, limit=limit, offset=offset
+            )
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def admin_update_reservation(self, reservation_id: int, fields: dict):
+        conn, service = self._get_service()
+        try:
+            return service.admin_update_reservation(reservation_id, fields)
         finally:
             if not self._external_conn:
                 conn.close()

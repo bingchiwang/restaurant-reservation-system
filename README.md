@@ -8,6 +8,7 @@
 - **架構決策紀錄 (ADR)**：
   - [ADR-001: 後端分層架構](docs/adr/ADR-001-layered-architecture.md)
   - [ADR-002: 資料庫交易與桌位併發控制機制](docs/adr/ADR-002-database-concurrency-and-locking.md)
+  - [ADR-003: 統一後端託管前後端與後端控制前端架構](docs/adr/ADR-003-unified-hosting-and-frontend-control.md)
 - **資料庫規範與 ER 圖**：
   - [docs/database/schema.sql](docs/database/schema.sql)
   - [docs/database/er-diagram.md](docs/database/er-diagram.md)
@@ -46,25 +47,30 @@
 
 ## 快速啟動
 
-### 後端 (Backend)
+### 一鍵啟動統一伺服器（推薦）
+
+直接雙擊專案根目錄的 **`啟動系統.bat`**，系統將於 `http://127.0.0.1:5000` 啟動統一伺服器：
+- **顧客前端網頁**：`http://127.0.0.1:5000`
+- **後端管理控制中心**：`http://127.0.0.1:5000/admin`
+
+### 手動啟動後端 (Backend)
 
 ```bash
-# 1. 進入後端目錄並建立虛擬環境
+# 1. 進入後端目錄並啟動虛擬環境
 cd backend
-python -m venv venv
 venv\Scripts\activate
 
 # 2. 安裝依賴套件
 pip install -r requirements.txt
 
-# 3. 執行測試
+# 3. 執行自動化測試
 python -m pytest
 
-# 4. 啟動後端服務 (預設埠號 5000)
+# 4. 啟動統一伺服器 (預設埠號 5000)
 python run.py
 ```
 
-### 前端 (Frontend)
+### 手動啟動前端開發伺服器 (Expo Dev)
 
 ```bash
 cd frontend

@@ -151,3 +151,25 @@ CREATE TABLE IF NOT EXISTS `order_items` (
     CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_order_items_item` FOREIGN KEY (`item_id`) REFERENCES `menu_items` (`item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+-- 10. StoreSettings (後端即時控制前端與營業設定)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_settings` (
+    `setting_id` INT NOT NULL DEFAULT 1,
+    `store_status` VARCHAR(20) NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN, CLOSED, MAINTENANCE',
+    `reservations_enabled` TINYINT(1) NOT NULL DEFAULT 1,
+    `ordering_enabled` TINYINT(1) NOT NULL DEFAULT 1,
+    `pre_order_enabled` TINYINT(1) NOT NULL DEFAULT 1,
+    `announcement_text` VARCHAR(500) NOT NULL DEFAULT '',
+    `announcement_type` VARCHAR(20) NOT NULL DEFAULT 'info' COMMENT 'info, warning, danger',
+    `opening_time` VARCHAR(10) NOT NULL DEFAULT '11:00',
+    `closing_time` VARCHAR(10) NOT NULL DEFAULT '21:30',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`setting_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `store_settings` (
+    `setting_id`, `store_status`, `reservations_enabled`, `ordering_enabled`,
+    `pre_order_enabled`, `announcement_text`, `announcement_type`, `opening_time`, `closing_time`
+) VALUES (1, 'OPEN', 1, 1, 1, '', 'info', '11:00', '21:30');

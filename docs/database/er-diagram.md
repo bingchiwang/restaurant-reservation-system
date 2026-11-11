@@ -101,6 +101,19 @@ erDiagram
         decimal subtotal
         string note
     }
+
+    STORE_SETTINGS {
+        int setting_id PK
+        string store_status
+        boolean reservations_enabled
+        boolean ordering_enabled
+        boolean pre_order_enabled
+        string announcement_text
+        string announcement_type
+        string opening_time
+        string closing_time
+        datetime updated_at
+    }
 ```
 
 ---

@@ -1,7 +1,17 @@
 // API Client for Restaurant Reservation & Ordering System
-// Automatically targets Flask backend at localhost:5000
+// Uses same-origin /api/v1 when hosted by Flask (:5000), falling back to 127.0.0.1:5000 for local Metro dev
 
-export const API_BASE_URL = "http://127.0.0.1:5000/api/v1";
+const getApiBaseUrl = () => {
+  if (typeof window !== "undefined" && window.location) {
+    const { protocol, port, origin } = window.location;
+    if (protocol.startsWith("http") && port !== "8081") {
+      return `${origin}/api/v1`;
+    }
+  }
+  return "http://127.0.0.1:5000/api/v1";
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -25,6 +35,10 @@ async function request(endpoint, options = {}) {
     throw error;
   }
 }
+
+export const SystemAPI = {
+  getConfig: () => request("/system/config")
+};
 
 export const MenuAPI = {
   getCategories: () => request("/menu/categories"),
@@ -61,48 +75,4 @@ export const OrderAPI = {
     });
   },
   getOrder: (orderId) => request(`/orders/${orderId}`)
-};
-
-export const AuthAPI = {
-  login: (email, password) => {
-    return request("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
-    });
-  }
-};
-
-export const AdminAPI = {
-  getReservations: (token, date = null, status = null) => {
-    let query = [];
-    if (date) query.push(`date=${encodeURIComponent(date)}`);
-    if (status) query.push(`status=${encodeURIComponent(status)}`);
-    const qStr = query.length ? `?${query.join("&")}` : "";
-    return request(`/admin/reservations${qStr}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-  },
-  updateReservationStatus: (token, reservationId, newStatus) => {
-    return request(`/admin/reservations/${reservationId}/status`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: newStatus })
-    });
-  },
-  getOrders: (token, date = null, status = null) => {
-    let query = [];
-    if (date) query.push(`date=${encodeURIComponent(date)}`);
-    if (status) query.push(`status=${encodeURIComponent(status)}`);
-    const qStr = query.length ? `?${query.join("&")}` : "";
-    return request(`/admin/orders${qStr}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-  },
-  updateOrderStatus: (token, orderId, newStatus) => {
-    return request(`/admin/orders/${orderId}/status`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: newStatus })
-    });
-  }
 };

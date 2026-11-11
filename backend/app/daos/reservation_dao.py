@@ -96,7 +96,25 @@ class ReservationDAO:
             """, (status, reservation_id))
             return cursor.rowcount > 0
 
-    def list_reservations(self, date_str=None, status=None, limit=50, offset=0):
+    def update_reservation_fields(self, reservation_id: int, fields: dict):
+        """Updates allowed fields on reservations table."""
+        allowed = {"party_size", "start_at", "end_at", "status"}
+        update_cols = []
+        params = []
+        for k, v in fields.items():
+            if k in allowed:
+                update_cols.append(f"{k} = ?")
+                params.append(v)
+        if not update_cols:
+            return False
+        params.append(reservation_id)
+        sql = f"UPDATE reservations SET {', '.join(update_cols)}, updated_at = CURRENT_TIMESTAMP WHERE reservation_id = ?"
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute(sql, tuple(params))
+            return cursor.rowcount > 0
+
+    def list_reservations(self, date_str=None, status=None, sort_order="asc", limit=50, offset=0):
+        order_dir = "DESC" if str(sort_order or "").lower() == "desc" else "ASC"
         query = """
             SELECT 
                 r.reservation_id,
@@ -126,7 +144,7 @@ class ReservationDAO:
             query += " AND r.status = ?"
             params.append(status)
 
-        query += " ORDER BY r.start_at ASC LIMIT ? OFFSET ?"
+        query += f" ORDER BY r.start_at {order_dir}, r.reservation_id {order_dir} LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
         with get_db_cursor(self.conn) as cursor:

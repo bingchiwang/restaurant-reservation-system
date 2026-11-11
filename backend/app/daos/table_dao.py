@@ -49,6 +49,17 @@ class TableDAO:
             rows = cursor.fetchall()
             return set(row["table_id"] if isinstance(row, dict) else row[0] for row in rows)
 
+    def get_table_by_id(self, table_id: int):
+        """Retrieves a single dining table by table_id."""
+        with get_db_cursor(self.conn) as cursor:
+            cursor.execute("""
+                SELECT table_id, table_name, capacity, status, created_at, updated_at
+                FROM dining_tables
+                WHERE table_id = ?
+            """, (table_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
     def create_table(self, table_name: str, capacity: int, status: str = "ACTIVE"):
         """
         Creates a new dining table.
@@ -59,3 +70,22 @@ class TableDAO:
                 VALUES (?, ?, ?)
             """, (table_name.strip(), capacity, status))
             return cursor.lastrowid
+
+    def update_table(self, table_id: int, fields: dict):
+        """Updates allowed fields on a dining table."""
+        allowed = {"table_name", "capacity", "status"}
+        update_cols = []
+        params = []
+        for k, v in fields.items():
+            if k in allowed:
+                update_cols.append(f"{k} = ?")
+                params.append(v)
+
+        if not update_cols:
+            return False
+
+        params.append(table_id)
+        sql = f"UPDATE dining_tables SET {', '.join(update_cols)}, updated_at = CURRENT_TIMESTAMP WHERE table_id = ?"
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute(sql, tuple(params))
+            return cursor.rowcount > 0

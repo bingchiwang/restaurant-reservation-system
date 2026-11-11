@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from backend.app.facades.reservation_facade import ReservationFacade
 from backend.app.services.reservation_service import NoAvailableTableError
+from backend.app.utils.exceptions import FeatureDisabledError
 
 reservation_bp = Blueprint("reservation", __name__, url_prefix="/api/v1/reservations")
 
@@ -43,6 +44,12 @@ def create_reservation():
             "message": "Reservation confirmed",
             "data": reservation
         }), 201
+    except FeatureDisabledError as e:
+        return jsonify({
+            "success": False,
+            "error": "SERVICE_PAUSED",
+            "message": str(e)
+        }), 403
     except NoAvailableTableError as e:
         return jsonify({
             "success": False,

@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>餐廳管理控制中心 — 後端管理後台</title>
+  <style>
+    :root {
+      --primary: #1d3557;
+      --accent: #e63946;
+      --success: #2a9d8f;
+      --warning: #e9a825;
+      --danger: #d62828;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #dee2e6;
+      --text: #212529;
+      --muted: #6c757d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .hidden { display: none !important; }
+
+    /* Login Screen */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #1d3557 0%, #2b4c7e 100%);
+    }
+    .login-card {
+      background: var(--card);
+      width: 100%;
+      max-width: 420px;
+      border-radius: 14px;
+      padding: 32px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    }
+    .login-card h1 { font-size: 22px; color: var(--primary); text-align: center; margin-bottom: 6px; }
+    .login-card p { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #495057; margin-bottom: 6px; }
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(29,53,87,0.15); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      text-decoration: none;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--accent); color: #fff; }
+    .btn-warning { background: var(--warning); color: #212529; }
+    .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+    .btn-block { width: 100%; padding: 12px; font-size: 15px; }
+
+    /* Top Bar */
+    .topbar {
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .status-pill {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+    }
+    .pill-open { background: #2a9d8f; }
+    .pill-closed { background: #e9a825; color: #212529; }
+    .pill-maint { background: #e63946; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+    }
+    .nav-tab {
+      padding: 14px 18px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .nav-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--accent);
+    }
+
+    /* Main Container */
+    .main {
+      max-width: 1120px;
+      margin: 24px auto;
+      padding: 0 16px 60px;
+    }
+    .panel {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      margin-bottom: 20px;
+    }
+    .panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Controls Grid */
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+    .mode-card {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #fff;
+    }
+    .mode-card.selected-OPEN { border-color: var(--success); background: #eefaf7; }
+    .mode-card.selected-CLOSED { border-color: var(--warning); background: #fff9eb; }
+    .mode-card.selected-MAINTENANCE { border-color: var(--danger); background: #fff0f1; }
+    .mode-card strong { display: block; font-size: 15px; margin-bottom: 4px; }
+    .mode-card span { font-size: 12px; color: var(--muted); }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fafbfc;
+    }
+    .toggle-row label { font-weight: 600; font-size: 14px; }
+    .toggle-row small { display: block; color: var(--muted); font-size: 12px; }
+    .switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ced4da; transition: .2s; border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px;
+      background-color: white; transition: .2s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--success); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    /* Filters & Cards */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .filter-bar .form-control { width: auto; min-width: 160px; }
+
+    .record-list { display: flex; flex-direction: column; gap: 12px; }
+    .record-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      background: #fff;
+    }
+    .record-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #f1f3f5;
+    }
+    .record-title { font-size: 15px; font-weight: 700; color: var(--primary); }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      color: #fff;
+      background: var(--muted);
+    }
+    .badge-PENDING { background: #e9a825; color: #212529; }
+    .badge-CONFIRMED, .badge-ACTIVE, .badge-READY { background: var(--success); }
+    .badge-PREPARING { background: #e76f51; }
+    .badge-COMPLETED { background: #457b9d; }
+    .badge-CANCELLED, .badge-MAINTENANCE, .badge-DISABLED, .badge-OFF { background: var(--accent); }
+
+    .record-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 6px 16px;
+      font-size: 13px;
+      color: #495057;
+      margin-bottom: 10px;
+    }
+    .order-items-box {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .order-items-box li { list-style: none; padding: 3px 0; }
+    .record-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    /* Tables Grid */
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.data-table th, table.data-table td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eef0f3;
+    }
+    table.data-table th { background: #f8f9fa; color: var(--primary); font-weight: 700; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; z-index: 1000;
+    }
+    .modal {
+      background: #fff; border-radius: 12px; width: 100%; max-width: 620px;
+      max-height: 90vh; overflow-y: auto; padding: 24px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+    .modal-edit-item {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding: 8px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 8px;
+      background: #fafbfc;
+    }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: #212529; color: #fff; padding: 12px 18px;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2); z-index: 2000;
+    }
+    .toast.ok { background: var(--success); }
+    .toast.err { background: var(--accent); }
+    .error-msg { color: var(--accent); font-size: 13px; margin-top: 8px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- Login View (Only in Backend /admin, removed from Customer Frontend) -->
+  <div id="loginView" class="login-wrap">
+    <div class="login-card">
+      <h1>🔐 後端管理控制中心</h1>
+      <p>僅限餐廳管理員或授權店員登入，可即時控制顧客前端與訂單預約</p>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">管理員信箱</label>
+          <input id="loginEmail" type="email" class="form-control" value="admin@restaurant.com" required />
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">密碼</label>
+          <input id="loginPassword" type="password" class="form-control" placeholder="請輸入管理員密碼" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">登入後端控制中心</button>
+        <div id="loginError" class="error-msg hidden"></div>
+      </form>
+      <div style="margin-top: 18px; text-align: center;">
+        <a href="/" style="font-size: 13px; color: #457b9d; text-decoration: none;">← 前往顧客端首頁 (/)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard View -->
+  <div id="appView" class="hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>🍽️ 餐廳後端管理控制中心</h1>
+        <span id="topStorePill" class="status-pill pill-open">營業中</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="/" target="_blank" class="btn btn-outline" style="background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.3);">
+          ↗ 開啟顧客前端 (/)
+        </a>
+        <button class="btn btn-danger" onclick="logout()">登出</button>
+      </div>
+    </header>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="control" onclick="switchTab('control')">🎛️ 前端即時控制</button>
+      <button class="nav-tab" data-tab="reservations" onclick="switchTab('reservations')">📅 顧客預約管理</button>
+      <button class="nav-tab" data-tab="orders" onclick="switchTab('orders')">🧾 顧客點餐訂單</button>
+      <button class="nav-tab" data-tab="menu" onclick="switchTab('menu')">📖 菜單管理</button>
+      <button class="nav-tab" data-tab="tables" onclick="switchTab('tables')">🪑 桌位管理</button>
+    </nav>
+
+    <main class="main">
+      <!-- TAB 1: Frontend Control -->
+      <section id="tab-control">
+        <div class="panel">
+          <div class="panel-title">
+            <span>1. 商店總開關與前端營業狀態控制</span>
+            <span style="font-size:12px; color:var(--muted);">儲存後，顧客前端將於數秒內自動同步套用</span>
+          </div>
+          <div class="grid-3" style="margin-bottom: 18px;">
+            <div class="mode-card" id="mode-OPEN" onclick="selectStoreStatus('OPEN')">
+              <strong>🟢 營業中 (OPEN)</strong>
+              <span>顧客前端正常顯示菜單、開放線上預約與現場點餐</span>
+            </div>
+            <div class="mode-card" id="mode-CLOSED" onclick="selectStoreStatus('CLOSED')">
+              <strong>🟡 休息・打烊中 (CLOSED)</strong>
+              <span>前端顯示休息提示橫幅，鎖定送出新預約與點餐</span>
+            </div>
+            <div class="mode-card" id="mode-MAINTENANCE" onclick="selectStoreStatus('MAINTENANCE')">
+              <strong>🔴 系統維護模式 (MAINTENANCE)</strong>
+              <span>顧客前端全面顯示系統維護公告並暫停互動</span>
+            </div>
+          </div>
+
+          <div class="panel-title" style="margin-top:16px;"><span>2. 前端功能模組開關</span></div>
+          <div class="grid-3" style="margin-bottom: 18px;">
+            <div class="toggle-row">
+              <div>
+                <label for="chkResEnabled">開放線上預約</label>
+                <small>關閉時顧客前端無法提交訂位</small>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="chkResEnabled" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <label for="chkOrdEnabled">開放現場點餐</label>
+                <small>關閉時前端停用加入購物車與送單</small>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="chkOrdEnabled" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <label for="chkPreOrdEnabled">開放預約預點餐</label>
+                <small>控制預約表單是否允許附帶餐點</small>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="chkPreOrdEnabled" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <div class="panel-title"><span>3. 營業時段設定</span></div>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label for="cfgOpenTime">開始營業時間</label>
+                  <input id="cfgOpenTime" type="time" class="form-control" value="11:00" />
+                </div>
+                <div class="form-group">
+                  <label for="cfgCloseTime">結束營業時間</label>
+                  <input id="cfgCloseTime" type="time" class="form-control" value="21:30" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="panel-title">
+                <span>4. 前端全站公告橫幅</span>
+                <button type="button" class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="clearAnnouncement()">清除公告</button>
+              </div>
+              <div class="form-group">
+                <label for="cfgAnnText">公告內容 (留空則不顯示)</label>
+                <input id="cfgAnnText" type="text" class="form-control" placeholder="例：今日晚餐客滿，歡迎預約明日！" />
+              </div>
+              <div class="form-group">
+                <label for="cfgAnnType">公告樣式</label>
+                <select id="cfgAnnType" class="form-control">
+                  <option value="info">一般資訊 (藍色)</option>
+                  <option value="warning">重要提醒 (橘黃色)</option>
+                  <option value="danger">緊急公告 (紅色)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px; display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary" style="padding:12px 28px; font-size:15px;" onclick="saveSystemConfig()">💾 儲存設定並立即控制前端</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Reservations -->
+      <section id="tab-reservations" class="hidden">
+        <div class="panel">
+          <div class="panel-title">
+            <span>📅 顧客預約列表 (依日期排列)</span>
+            <button class="btn btn-outline" onclick="loadReservations()">🔄 重新整理</button>
+          </div>
+          <div class="filter-bar">
+            <label>日期篩選：</label>
+            <input type="date" id="resDateFilter" class="form-control" onchange="loadReservations()" />
+            <select id="resStatusFilter" class="form-control" onchange="loadReservations()">
+              <option value="">全部狀態</option>
+              <option value="CONFIRMED">已確認 (CONFIRMED)</option>
+              <option value="COMPLETED">已完成 (COMPLETED)</option>
+              <option value="CANCELLED">已取消 (CANCELLED)</option>
+            </select>
+            <select id="resSortOrder" class="form-control" onchange="loadReservations()">
+              <option value="asc">日期由近到遠 (升冪)</option>
+              <option value="desc">日期由遠到近 (降冪)</option>
+            </select>
+            <button class="btn btn-outline" onclick="resetResFilter()">重設篩選</button>
+          </div>
+          <div id="reservationsList" class="record-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Orders -->
+      <section id="tab-orders" class="hidden">
+        <div class="panel">
+          <div class="panel-title">
+            <span>🧾 顧客點餐訂單 (依日期排列)</span>
+            <button class="btn btn-outline" onclick="loadOrders()">🔄 重新整理</button>
+          </div>
+          <div class="filter-bar">
+            <label>下單日期：</label>
+            <input type="date" id="ordDateFilter" class="form-control" onchange="loadOrders()" />
+            <select id="ordStatusFilter" class="form-control" onchange="loadOrders()">
+              <option value="">全部狀態</option>
+              <option value="PENDING">待確認 (PENDING)</option>
+              <option value="CONFIRMED">已接單 (CONFIRMED)</option>
+              <option value="PREPARING">製作中 (PREPARING)</option>
+              <option value="READY">餐點完成 (READY)</option>
+              <option value="COMPLETED">已完成 (COMPLETED)</option>
+              <option value="CANCELLED">已取消 (CANCELLED)</option>
+            </select>
+            <select id="ordSortOrder" class="form-control" onchange="loadOrders()">
+              <option value="desc">最新下單優先 (降冪)</option>
+              <option value="asc">較早下單優先 (升冪)</option>
+            </select>
+            <button class="btn btn-outline" onclick="resetOrdFilter()">重設篩選</button>
+          </div>
+          <div id="ordersList" class="record-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Menu Management -->
+      <section id="tab-menu" class="hidden">
+        <div class="panel">
+          <div class="panel-title">
+            <span>📖 新增餐點 (將同步顯示於顧客前端)</span>
+          </div>
+          <form id="createMenuForm" class="grid-3">
+            <div class="form-group">
+              <label>餐點分類</label>
+              <select id="newItemCategory" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label>餐點名稱</label>
+              <input id="newItemName" type="text" class="form-control" placeholder="例：法式油封鴨腿" required />
+            </div>
+            <div class="form-group">
+              <label>售價 (NT$)</label>
+              <input id="newItemPrice" type="number" step="1" min="0" class="form-control" placeholder="380" required />
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label>餐點說明</label>
+              <input id="newItemDesc" type="text" class="form-control" placeholder="選填餐點介紹..." />
+            </div>
+            <div class="form-group" style="display:flex; align-items:flex-end;">
+              <button type="submit" class="btn btn-success btn-block">+ 新增餐點至菜單</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <span>所有餐點清單（含已下架）</span>
+            <button class="btn btn-outline" onclick="loadAdminMenu()">🔄 重新整理</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>編號</th>
+                  <th>分類</th>
+                  <th>名稱 / 說明</th>
+                  <th>價格</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="menuTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: Table Management -->
+      <section id="tab-tables" class="hidden">
+        <div class="panel">
+          <div class="panel-title"><span>🪑 新增餐廳桌位</span></div>
+          <form id="createTableForm" class="grid-3">
+            <div class="form-group">
+              <label>桌位名稱</label>
+              <input id="newTableName" type="text" class="form-control" placeholder="例：D-01" required />
+            </div>
+            <div class="form-group">
+              <label>容納人數</label>
+              <input id="newTableCap" type="number" min="1" max="20" class="form-control" value="4" required />
+            </div>
+            <div class="form-group" style="display:flex; align-items:flex-end;">
+              <button type="submit" class="btn btn-success btn-block">+ 新增桌位</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <span>桌位狀態與容量設定（停用桌位將無法預約或現場點餐）</span>
+            <button class="btn btn-outline" onclick="loadAdminTables()">🔄 重新整理</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>桌號 ID</th>
+                  <th>桌位名稱</th>
+                  <th>容納人數</th>
+                  <th>目前狀態</th>
+                  <th>管理操作</th>
+                </tr>
+              </thead>
+              <tbody id="tablesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Edit Order Modal -->
+  <div id="editOrderModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="editOrderTitle">編輯訂單</h3>
+        <button class="btn btn-outline" onclick="closeOrderModal()">✕ 關閉</button>
+      </div>
+      <div class="form-group">
+        <label>更改桌位</label>
+        <select id="editOrderTable" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label>餐點明細</label>
+        <div id="editOrderItemsContainer"></div>
+      </div>
+      <div class="form-group" style="display:flex; gap:8px; align-items:center;">
+        <select id="addOrderItemSelect" class="form-control" style="flex:1;"></select>
+        <button type="button" class="btn btn-outline" onclick="addItemToEditModal()">+ 加入餐點</button>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button type="button" class="btn btn-outline" onclick="closeOrderModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="saveOrderEdit()">💾 儲存更改並重算金額</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Menu Item Modal -->
+  <div id="editMenuModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="editMenuTitle">編輯餐點</h3>
+        <button class="btn btn-outline" onclick="closeMenuModal()">✕ 關閉</button>
+      </div>
+      <div class="form-group">
+        <label>餐點名稱</label>
+        <input id="editItemName" type="text" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label>價格 (NT$)</label>
+        <input id="editItemPrice" type="number" min="0" step="1" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label>說明</label>
+        <input id="editItemDesc" type="text" class="form-control" />
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button type="button" class="btn btn-outline" onclick="closeMenuModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="saveMenuEdit()">💾 儲存餐點修改</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    const TOKEN_KEY = "restaurant_backend_admin_token";
+    let authToken = sessionStorage.getItem(TOKEN_KEY) || null;
+    let currentStoreStatus = "OPEN";
+    let cachedTables = [];
+    let cachedMenuItems = [];
+    let cachedCategories = [];
+    let editingOrderId = null;
+    let editingOrderItems = [];
+    let editingMenuItemId = null;
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function showToast(msg, type = "ok") {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast " + type;
+      setTimeout(() => el.classList.add("hidden"), 2800);
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (authToken) headers["Authorization"] = "Bearer " + authToken;
+      const res = await fetch("/api/v1" + path, { ...options, headers });
+      const data = await res.json();
+      if (res.status === 401 || res.status === 403) {
+        if (path !== "/auth/login") {
+          logout();
+          showToast("登入逾時或權限不足，請重新登入", "err");
+        }
+        throw new Error(data.message || "未授權");
+      }
+      if (!res.ok) throw new Error(data.message || data.error || "操作失敗");
+      return data;
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const errBox = document.getElementById("loginError");
+      errBox.classList.add("hidden");
+      try {
+        const res = await apiFetch("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password })
+        });
+        const user = res.data.user;
+        if (user.role !== "ADMIN" && user.role !== "STAFF") {
+          throw new Error("此帳號不是管理員，無法登入控制中心");
+        }
+        authToken = res.data.token;
+        sessionStorage.setItem(TOKEN_KEY, authToken);
+        document.getElementById("loginPassword").value = "";
+        enterDashboard();
+      } catch (err) {
+        errBox.textContent = err.message;
+        errBox.classList.remove("hidden");
+      }
+    });
+
+    function logout() {
+      authToken = null;
+      sessionStorage.removeItem(TOKEN_KEY);
+      document.getElementById("appView").classList.add("hidden");
+      document.getElementById("loginView").classList.remove("hidden");
+    }
+
+    async function enterDashboard() {
+      document.getElementById("loginView").classList.add("hidden");
+      document.getElementById("appView").classList.remove("hidden");
+      await Promise.all([loadSystemConfig(), loadAdminTables(), loadAdminMenu()]);
+      loadReservations();
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".nav-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+      });
+      ["control", "reservations", "orders", "menu", "tables"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== tabName);
+      });
+      if (tabName === "control") loadSystemConfig();
+      if (tabName === "reservations") loadReservations();
+      if (tabName === "orders") loadOrders();
+      if (tabName === "menu") loadAdminMenu();
+      if (tabName === "tables") loadAdminTables();
+    }
+
+    // ---- TAB 1: System Config ----
+    function selectStoreStatus(status) {
+      currentStoreStatus = status;
+      ["OPEN", "CLOSED", "MAINTENANCE"].forEach(s => {
+        const card = document.getElementById("mode-" + s);
+        card.className = "mode-card" + (s === status ? " selected-" + s : "");
+      });
+    }
+
+    function updateTopPill(status) {
+      const pill = document.getElementById("topStorePill");
+      if (status === "OPEN") {
+        pill.textContent = "🟢 營業中";
+        pill.className = "status-pill pill-open";
+      } else if (status === "CLOSED") {
+        pill.textContent = "🟡 休息打烊中";
+        pill.className = "status-pill pill-closed";
+      } else {
+        pill.textContent = "🔴 系統維護中";
+        pill.className = "status-pill pill-maint";
+      }
+    }
+
+    function clearAnnouncement() {
+      document.getElementById("cfgAnnText").value = "";
+    }
+
+    async function loadSystemConfig() {
+      try {
+        const res = await apiFetch("/admin/system/config");
+        const cfg = res.data;
+        selectStoreStatus(cfg.store_status);
+        updateTopPill(cfg.store_status);
+        document.getElementById("chkResEnabled").checked = !!cfg.reservations_enabled;
+        document.getElementById("chkOrdEnabled").checked = !!cfg.ordering_enabled;
+        document.getElementById("chkPreOrdEnabled").checked = !!cfg.pre_order_enabled;
+        document.getElementById("cfgOpenTime").value = cfg.opening_time || "11:00";
+        document.getElementById("cfgCloseTime").value = cfg.closing_time || "21:30";
+        document.getElementById("cfgAnnText").value = cfg.announcement_text || "";
+        document.getElementById("cfgAnnType").value = cfg.announcement_type || "info";
+      } catch (err) {
+        showToast("讀取系統設定失敗：" + err.message, "err");
+      }
+    }
+
+    async function saveSystemConfig() {
+      try {
+        const payload = {
+          store_status: currentStoreStatus,
+          reservations_enabled: document.getElementById("chkResEnabled").checked,
+          ordering_enabled: document.getElementById("chkOrdEnabled").checked,
+          pre_order_enabled: document.getElementById("chkPreOrdEnabled").checked,
+          opening_time: document.getElementById("cfgOpenTime").value,
+          closing_time: document.getElementById("cfgCloseTime").value,
+          announcement_text: document.getElementById("cfgAnnText").value.trim(),
+          announcement_type: document.getElementById("cfgAnnType").value
+        };
+        const res = await apiFetch("/admin/system/config", {
+          method: "PATCH",
+          body: JSON.stringify(payload)
+        });
+        updateTopPill(res.data.store_status);
+        showToast("設定已儲存！顧客前端將同步更新");
+      } catch (err) {
+        showToast("儲存失敗：" + err.message, "err");
+      }
+    }
+
+    // ---- TAB 2: Reservations ----
+    function resetResFilter() {
+      document.getElementById("resDateFilter").value = "";
+      document.getElementById("resStatusFilter").value = "";
+      document.getElementById("resSortOrder").value = "asc";
+      loadReservations();
+    }
+
+    async function loadReservations() {
+      const date = document.getElementById("resDateFilter").value;
+      const status = document.getElementById("resStatusFilter").value;
+      const sort = document.getElementById("resSortOrder").value;
+      const params = new URLSearchParams({ sort });
+      if (date) params.append("date", date);
+      if (status) params.append("status", status);
+
+      try {
+        const res = await apiFetch("/admin/reservations?" + params.toString());
+        const list = res.data || [];
+        const container = document.getElementById("reservationsList");
+        if (!list.length) {
+          container.innerHTML = '<div style="text-align:center;color:#adb5bd;padding:30px;">目前無符合條件的預約紀錄</div>';
+          return;
+        }
+        const activeTables = cachedTables.filter(t => t.status === "ACTIVE");
+        container.innerHTML = list.map(r => {
+          const tableOptions = activeTables.map(t =>
+            `<option value="${t.table_id}" ${t.table_id === r.table_id ? "selected" : ""}>${escapeHtml(t.table_name)} (${t.capacity}人座)</option>`
+          ).join("");
+          return `
+            <div class="record-card">
+              <div class="record-head">
+                <span class="record-title">${escapeHtml(r.reservation_code)}</span>
+                <span class="badge badge-${escapeHtml(r.status)}">${escapeHtml(r.status)}</span>
+              </div>
+              <div class="record-meta">
+                <div>👤 顧客：${escapeHtml(r.guest_name || "會員訂位")}</div>
+                <div>📞 電話：${escapeHtml(r.guest_phone || "無")}</div>
+                <div>📅 用餐時段：${escapeHtml(r.start_at)} ~ ${escapeHtml(String(r.end_at || "").slice(11,16))}</div>
+                <div>👥 人數桌位：${r.party_size} 位 / <b>${escapeHtml(r.table_name || ("#" + r.table_id))}</b></div>
+              </div>
+              ${r.status !== "CANCELLED" && r.status !== "COMPLETED" ? `
+                <div class="record-actions">
+                  <select class="form-control" style="padding:6px 10px;" onchange="changeReservationTable(${r.reservation_id}, this.value)">
+                    ${tableOptions}
+                  </select>
+                  <button class="btn btn-success" onclick="updateReservationStatus(${r.reservation_id}, 'COMPLETED')">✓ 標記完成</button>
+                  <button class="btn btn-danger" onclick="updateReservationStatus(${r.reservation_id}, 'CANCELLED')">✕ 取消預約 (釋放桌位)</button>
+                </div>
+              ` : ""}
+            </div>
+          `;
+        }).join("");
+      } catch (err) {
+        showToast("載入預約失敗：" + err.message, "err");
+      }
+    }
+
+    async function updateReservationStatus(id, status) {
+      if (status === "CANCELLED" && !confirm("確定要取消此筆預約並釋放桌位嗎？")) return;
+      try {
+        await apiFetch(`/admin/reservations/${id}/status`, {
+          method: "PATCH",
+          body: JSON.stringify({ status })
+        });
+        showToast("預約狀態已更新");
+        loadReservations();
+      } catch (err) {
+        showToast(err.message, "err");
+      }
+    }
+
+    async function changeReservationTable(id, newTableId) {
+      try {
+        await apiFetch(`/admin/reservations/${id}/table`, {
+          method: "PATCH",
+          body: JSON.stringify({ table_id: Number(newTableId) })
+        });
+        showToast("已更換預約桌位");
+        loadReservations();
+      } catch (err) {
+        showToast("更換桌位失敗：" + err.message, "err");
+        loadReservations();
+      }
+    }
+
+    // ---- TAB 3: Orders ----
+    function resetOrdFilter() {
+      document.getElementById("ordDateFilter").value = "";
+      document.getElementById("ordStatusFilter").value = "";
+      document.getElementById("ordSortOrder").value = "desc";
+      loadOrders();
+    }
+
+    let currentOrdersMap = {};
+    async function loadOrders() {
+      const date = document.getElementById("ordDateFilter").value;
+      const status = document.getElementById("ordStatusFilter").value;
+      const sort = document.getElementById("ordSortOrder").value;
+      const params = new URLSearchParams({ sort });
+      if (date) params.append("date", date);
+      if (status) params.append("status", status);
+
+      try {
+        const res = await apiFetch("/admin/orders?" + params.toString());
+        const list = res.data || [];
+        currentOrdersMap = {};
+        list.forEach(o => currentOrdersMap[o.order_id] = o);
+
+        const container = document.getElementById("ordersList");
+        if (!list.length) {
+          container.innerHTML = '<div style="text-align:center;color:#adb5bd;padding:30px;">目前無符合條件的點餐訂單</div>';
+          return;
+        }
+        container.innerHTML = list.map(o => {
+          const itemsHtml = (o.items || []).map(it =>
+            `<li>• ${escapeHtml(it.item_name_snapshot)} × ${it.quantity} — <b>NT$ ${it.subtotal}</b>${it.note ? ` <span style="color:#6c757d;">[${escapeHtml(it.note)}]</span>` : ""}</li>`
+          ).join("");
+
+          let actionBtns = "";
+          if (o.status === "PENDING") {
+            actionBtns += `<button class="btn btn-primary" onclick="updateOrderStatus(${o.order_id}, 'CONFIRMED')">確認接單</button>`;
+          } else if (o.status === "CONFIRMED") {
+            actionBtns += `<button class="btn btn-primary" onclick="updateOrderStatus(${o.order_id}, 'PREPARING')">開始製作</button>`;
+          } else if (o.status === "PREPARING") {
+            actionBtns += `<button class="btn btn-primary" onclick="updateOrderStatus(${o.order_id}, 'READY')">餐點完成</button>`;
+          } else if (o.status === "READY") {
+            actionBtns += `<button class="btn btn-success" onclick="updateOrderStatus(${o.order_id}, 'COMPLETED')">完成結案</button>`;
+          }
+
+          if (o.status !== "COMPLETED" && o.status !== "CANCELLED") {
+            actionBtns += `<button class="btn btn-warning" onclick="openOrderModal(${o.order_id})">✏️ 更改訂單</button>`;
+          }
+          if (["PENDING", "CONFIRMED", "PREPARING"].includes(o.status)) {
+            actionBtns += `<button class="btn btn-danger" onclick="updateOrderStatus(${o.order_id}, 'CANCELLED')">✕ 取消訂單</button>`;
+          }
+
+          return `
+            <div class="record-card">
+              <div class="record-head">
+                <span class="record-title">訂單 #${o.order_id} (${o.order_type === "PRE_ORDER" ? "預約預點" : "現場點餐"})</span>
+                <span class="badge badge-${escapeHtml(o.status)}">${escapeHtml(o.status)}</span>
+              </div>
+              <div class="record-meta">
+                <div>🪑 桌號：${escapeHtml(o.table_name || (o.table_id ? "#" + o.table_id : "未指定"))}</div>
+                <div>🕒 下單日期：${escapeHtml(o.created_at)}</div>
+                <div style="color:var(--accent); font-weight:700;">💰 總金額：NT$ ${o.total_amount}</div>
+              </div>
+              <ul class="order-items-box">${itemsHtml}</ul>
+              <div class="record-actions">${actionBtns}</div>
+            </div>
+          `;
+        }).join("");
+      } catch (err) {
+        showToast("載入訂單失敗：" + err.message, "err");
+      }
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+      if (newStatus === "CANCELLED" && !confirm(`確定要取消訂單 #${orderId} 嗎？`)) return;
+      try {
+        await apiFetch(`/admin/orders/${orderId}/status`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: newStatus })
+        });
+        showToast(`訂單 #${orderId} 狀態已更新為 ${newStatus}`);
+        loadOrders();
+      } catch (err) {
+        showToast(err.message, "err");
+      }
+    }
+
+    // Edit Order Modal
+    function openOrderModal(orderId) {
+      const order = currentOrdersMap[orderId];
+      if (!order) return;
+      editingOrderId = orderId;
+      editingOrderItems = (order.items || []).map(it => ({
+        item_id: it.item_id,
+        name: it.item_name_snapshot,
+        unit_price: it.unit_price,
+        quantity: it.quantity,
+        note: it.note || ""
+      }));
+
+      document.getElementById("editOrderTitle").textContent = `更改訂單 #${orderId}`;
+      const activeTables = cachedTables.filter(t => t.status === "ACTIVE");
+      document.getElementById("editOrderTable").innerHTML = activeTables.map(t =>
+        `<option value="${t.table_id}" ${t.table_id === order.table_id ? "selected" : ""}>${escapeHtml(t.table_name)} (${t.capacity}人座)</option>`
+      ).join("");
+
+      const availMenu = cachedMenuItems.filter(m => m.is_available);
+      document.getElementById("addOrderItemSelect").innerHTML = availMenu.map(m =>
+        `<option value="${m.item_id}">${escapeHtml(m.name)} (NT$ ${m.price})</option>`
+      ).join("");
+
+      renderEditOrderItems();
+      document.getElementById("editOrderModal").classList.remove("hidden");
+    }
+
+    function renderEditOrderItems() {
+      const box = document.getElementById("editOrderItemsContainer");
+      if (!editingOrderItems.length) {
+        box.innerHTML = '<div style="color:#e63946;font-size:13px;">請至少保留一項餐點</div>';
+        return;
+      }
+      box.innerHTML = editingOrderItems.map((it, idx) => `
+        <div class="modal-edit-item">
+          <span style="flex:1;font-weight:600;">${escapeHtml(it.name)} (NT$ ${it.unit_price})</span>
+          <input type="number" min="1" value="${it.quantity}" style="width:64px;" class="form-control"
+            onchange="editingOrderItems[${idx}].quantity = Math.max(1, parseInt(this.value || 1, 10))" />
+          <input type="text" placeholder="備註" value="${escapeHtml(it.note)}" style="width:130px;" class="form-control"
+            onchange="editingOrderItems[${idx}].note = this.value" />
+          <button type="button" class="btn btn-danger" style="padding:6px 10px;" onclick="removeEditOrderItem(${idx})">移除</button>
+        </div>
+      `).join("");
+    }
+
+    function removeEditOrderItem(idx) {
+      editingOrderItems.splice(idx, 1);
+      renderEditOrderItems();
+    }
+
+    function addItemToEditModal() {
+      const select = document.getElementById("addOrderItemSelect");
+      const itemId = Number(select.value);
+      const found = cachedMenuItems.find(m => m.item_id === itemId);
+      if (!found) return;
+      const existing = editingOrderItems.find(it => it.item_id === itemId);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        editingOrderItems.push({
+          item_id: found.item_id,
+          name: found.name,
+          unit_price: found.price,
+          quantity: 1,
+          note: ""
+        });
+      }
+      renderEditOrderItems();
+    }
+
+    function closeOrderModal() {
+      document.getElementById("editOrderModal").classList.add("hidden");
+      editingOrderId = null;
+    }
+
+    async function saveOrderEdit() {
+      if (!editingOrderItems.length) {
+        showToast("訂單至少需包含一項餐點", "err");
+        return;
+      }
+      const tableId = Number(document.getElementById("editOrderTable").value);
+      try {
+        await apiFetch(`/admin/orders/${editingOrderId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            table_id: tableId,
+            items: editingOrderItems.map(it => ({
+              item_id: it.item_id,
+              quantity: Number(it.quantity),
+              note: it.note
+            }))
+          })
+        });
+        showToast(`訂單 #${editingOrderId} 已更新並重算總金額`);
+        closeOrderModal();
+        loadOrders();
+      } catch (err) {
+        showToast("更新失敗：" + err.message, "err");
+      }
+    }
+
+    // ---- TAB 4: Menu Management ----
+    async function loadAdminMenu() {
+      try {
+        const [catRes, itemRes] = await Promise.all([
+          apiFetch("/admin/menu/categories"),
+          apiFetch("/admin/menu")
+        ]);
+        cachedCategories = catRes.data || [];
+        cachedMenuItems = itemRes.data || [];
+
+        const catSelect = document.getElementById("newItemCategory");
+        catSelect.innerHTML = cachedCategories.map(c =>
+          `<option value="${c.category_id}">${escapeHtml(c.name)}</option>`
+        ).join("");
+
+        const tbody = document.getElementById("menuTableBody");
+        tbody.innerHTML = cachedMenuItems.map(m => `
+          <tr>
+            <td>#${m.item_id}</td>
+            <td>${escapeHtml(m.category_name)}</td>
+            <td><b>${escapeHtml(m.name)}</b><br><small style="color:#6c757d;">${escapeHtml(m.description || "")}</small></td>
+            <td><b>NT$ ${m.price}</b></td>
+            <td>
+              <span class="badge ${m.is_available ? "badge-ACTIVE" : "badge-OFF"}">
+                ${m.is_available ? "供應中" : "已下架"}
+              </span>
+            </td>
+            <td style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn btn-outline" style="padding:5px 10px;" onclick="openEditMenuModal(${m.item_id})">編輯</button>
+              <button class="btn ${m.is_available ? "btn-danger" : "btn-success"}" style="padding:5px 10px;"
+                onclick="toggleMenuAvailability(${m.item_id}, ${!m.is_available})">
+                ${m.is_available ? "下架" : "重新上架"}
+              </button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        showToast("載入菜單失敗：" + err.message, "err");
+      }
+    }
+
+    document.getElementById("createMenuForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await apiFetch("/admin/menu", {
+          method: "POST",
+          body: JSON.stringify({
+            category_id: Number(document.getElementById("newItemCategory").value),
+            name: document.getElementById("newItemName").value.trim(),
+            price: Number(document.getElementById("newItemPrice").value),
+            description: document.getElementById("newItemDesc").value.trim(),
+            is_available: true
+          })
+        });
+        document.getElementById("newItemName").value = "";
+        document.getElementById("newItemPrice").value = "";
+        document.getElementById("newItemDesc").value = "";
+        showToast("已新增餐點，顧客前端將同步更新");
+        loadAdminMenu();
+      } catch (err) {
+        showToast("新增失敗：" + err.message, "err");
+      }
+    });
+
+    async function toggleMenuAvailability(itemId, isAvailable) {
+      try {
+        await apiFetch(`/admin/menu/${itemId}/availability`, {
+          method: "PATCH",
+          body: JSON.stringify({ is_available: isAvailable })
+        });
+        showToast(isAvailable ? "餐點已重新上架" : "餐點已下架，顧客前端無法再點選");
+        loadAdminMenu();
+      } catch (err) {
+        showToast(err.message, "err");
+      }
+    }
+
+    function openEditMenuModal(itemId) {
+      const m = cachedMenuItems.find(x => x.item_id === itemId);
+      if (!m) return;
+      editingMenuItemId = itemId;
+      document.getElementById("editMenuTitle").textContent = `編輯餐點 #${itemId}`;
+      document.getElementById("editItemName").value = m.name;
+      document.getElementById("editItemPrice").value = m.price;
+      document.getElementById("editItemDesc").value = m.description || "";
+      document.getElementById("editMenuModal").classList.remove("hidden");
+    }
+
+    function closeMenuModal() {
+      document.getElementById("editMenuModal").classList.add("hidden");
+      editingMenuItemId = null;
+    }
+
+    async function saveMenuEdit() {
+      try {
+        await apiFetch(`/admin/menu/${editingMenuItemId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            name: document.getElementById("editItemName").value.trim(),
+            price: Number(document.getElementById("editItemPrice").value),
+            description: document.getElementById("editItemDesc").value.trim()
+          })
+        });
+        showToast("餐點資訊已更新");
+        closeMenuModal();
+        loadAdminMenu();
+      } catch (err) {
+        showToast("更新失敗：" + err.message, "err");
+      }
+    }
+
+    // ---- TAB 5: Tables Management ----
+    async function loadAdminTables() {
+      try {
+        const res = await apiFetch("/admin/tables");
+        cachedTables = res.data || [];
+        const tbody = document.getElementById("tablesBody");
+        tbody.innerHTML = cachedTables.map(t => `
+          <tr>
+            <td>#${t.table_id}</td>
+            <td><input type="text" class="form-control" style="width:110px;padding:4px 8px;" id="tname-${t.table_id}" value="${escapeHtml(t.table_name)}" /></td>
+            <td><input type="number" min="1" class="form-control" style="width:80px;padding:4px 8px;" id="tcap-${t.table_id}" value="${t.capacity}" /></td>
+            <td>
+              <select class="form-control" style="padding:4px 8px;" id="tstat-${t.table_id}">
+                <option value="ACTIVE" ${t.status === "ACTIVE" ? "selected" : ""}>ACTIVE (開放使用)</option>
+                <option value="MAINTENANCE" ${t.status === "MAINTENANCE" ? "selected" : ""}>MAINTENANCE (維護中)</option>
+                <option value="DISABLED" ${t.status === "DISABLED" ? "selected" : ""}>DISABLED (停用)</option>
+              </select>
+            </td>
+            <td>
+              <button class="btn btn-primary" style="padding:5px 12px;" onclick="saveTableUpdate(${t.table_id})">儲存變更</button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        showToast("載入桌位失敗：" + err.message, "err");
+      }
+    }
+
+    document.getElementById("createTableForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await apiFetch("/admin/tables", {
+          method: "POST",
+          body: JSON.stringify({
+            table_name: document.getElementById("newTableName").value.trim(),
+            capacity: Number(document.getElementById("newTableCap").value),
+            status: "ACTIVE"
+          })
+        });
+        document.getElementById("newTableName").value = "";
+        showToast("已新增桌位");
+        loadAdminTables();
+      } catch (err) {
+        showToast("新增失敗：" + err.message, "err");
+      }
+    });
+
+    async function saveTableUpdate(tableId) {
+      try {
+        await apiFetch(`/admin/tables/${tableId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            table_name: document.getElementById(`tname-${tableId}`).value.trim(),
+            capacity: Number(document.getElementById(`tcap-${tableId}`).value),
+            status: document.getElementById(`tstat-${tableId}`).value
+          })
+        });
+        showToast(`桌位 #${tableId} 已更新`);
+        loadAdminTables();
+      } catch (err) {
+        showToast("更新失敗：" + err.message, "err");
+      }
+    }
+
+    // Boot
+    if (authToken) {
+      enterDashboard();
+    }
+  </script>
+</body>
+</html>

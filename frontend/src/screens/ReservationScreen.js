@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,13 +11,29 @@ import {
 } from 'react-native';
 import { ReservationAPI } from '../api/client';
 import { useCart } from '../context/CartContext';
+import { useSystemConfig } from '../context/SystemConfigContext';
 
-const AVAILABLE_TIMES = [
-  "11:30", "12:00", "12:30", "13:00", "13:30",
-  "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
-];
+function buildTimeSlots(openStr, closeStr) {
+  const [oh, om] = (openStr || '11:00').split(':').map(Number);
+  const [ch, cm] = (closeStr || '21:30').split(':').map(Number);
+  const startMin = oh * 60 + om;
+  const endMin = ch * 60 + cm;
+  const slots = [];
+  for (let m = startMin; m <= endMin; m += 30) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    slots.push(`${hh}:${mm}`);
+  }
+  return slots;
+}
 
 export default function ReservationScreen({ onBookingSuccess }) {
+  const { config } = useSystemConfig();
+  const availableTimes = useMemo(
+    () => buildTimeSlots(config.opening_time, config.closing_time),
+    [config.opening_time, config.closing_time]
+  );
+
   const [partySize, setPartySize] = useState(2);
   const [selectedDate, setSelectedDate] = useState(() => {
     const tomorrow = new Date();
@@ -34,7 +50,20 @@ export default function ReservationScreen({ onBookingSuccess }) {
 
   const { cartItems, totalAmount, totalCount, clearCart } = useCart();
 
+  useEffect(() => {
+    if (availableTimes.length > 0 && !availableTimes.includes(selectedTime)) {
+      setSelectedTime(availableTimes[0]);
+    }
+  }, [availableTimes, selectedTime]);
+
+  const canReserve = config.store_status === 'OPEN' && config.reservations_enabled;
+  const canPreOrder = canReserve && config.pre_order_enabled && config.ordering_enabled;
+
   const handleBooking = async () => {
+    if (!canReserve) {
+      Alert.alert("暫停預約", "目前本店暫停線上預約服務");
+      return;
+    }
     if (!guestName.trim()) {
       Alert.alert("請填寫姓名", "請輸入訂位聯絡人姓名");
       return;
@@ -53,7 +82,7 @@ export default function ReservationScreen({ onBookingSuccess }) {
       note: note.trim()
     };
 
-    if (includePreOrder && cartItems.length > 0) {
+    if (canPreOrder && includePreOrder && cartItems.length > 0) {
       payload.items = cartItems.map(i => ({
         item_id: i.item_id,
         quantity: i.quantity,
@@ -66,7 +95,7 @@ export default function ReservationScreen({ onBookingSuccess }) {
       const res = await ReservationAPI.createReservation(payload);
       if (res.success) {
         setConfirmedBooking(res.data);
-        if (includePreOrder && cartItems.length > 0) {
+        if (canPreOrder && includePreOrder && cartItems.length > 0) {
           clearCart();
         }
       }
@@ -139,6 +168,17 @@ export default function ReservationScreen({ onBookingSuccess }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {!canReserve && (
+        <View style={styles.pausedCard}>
+          <Text style={styles.pausedTitle}>⚠️ 目前暫停線上預約服務</Text>
+          <Text style={styles.pausedSub}>
+            {config.store_status === 'CLOSED'
+              ? '本店目前處於非營業時間／休息中。'
+              : '餐廳管理員已暫時關閉線上預約功能，如有需要請電洽門市。'}
+          </Text>
+        </View>
+      )}
+
       <Text style={styles.sectionTitle}>1. 選擇人數</Text>
       <View style={styles.partySizeSelector}>
         {[1, 2, 3, 4, 5, 6, 8].map(size => (
@@ -154,7 +194,9 @@ export default function ReservationScreen({ onBookingSuccess }) {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>2. 用餐日期與時段</Text>
+      <Text style={styles.sectionTitle}>
+        2. 用餐日期與時段 ({config.opening_time} ~ {config.closing_time})
+      </Text>
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>預約日期 (YYYY-MM-DD)</Text>
         <TextInput
@@ -167,7 +209,7 @@ export default function ReservationScreen({ onBookingSuccess }) {
 
       <Text style={styles.inputLabel}>選擇時段</Text>
       <View style={styles.timeGrid}>
-        {AVAILABLE_TIMES.map(time => (
+        {availableTimes.map(time => (
           <TouchableOpacity
             key={time}
             style={[styles.timeChip, selectedTime === time && styles.timeChipActive]}
@@ -219,26 +261,32 @@ export default function ReservationScreen({ onBookingSuccess }) {
         <View style={styles.cartLinkBanner}>
           <View style={{ flex: 1 }}>
             <Text style={styles.cartBannerTitle}>購物車已有 {totalCount} 件餐點 (NT$ {totalAmount})</Text>
-            <Text style={styles.cartBannerSubtitle}>可於預約時直接提前送單備餐</Text>
+            <Text style={styles.cartBannerSubtitle}>
+              {canPreOrder ? "可於預約時直接提前送單備餐" : "目前餐廳暫停預約預點餐，本單將僅建立訂位"}
+            </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.checkbox, includePreOrder && styles.checkboxActive]}
-            onPress={() => setIncludePreOrder(!includePreOrder)}
-          >
-            <Text style={styles.checkboxText}>{includePreOrder ? '✓ 預點餐' : '不預點'}</Text>
-          </TouchableOpacity>
+          {canPreOrder && (
+            <TouchableOpacity
+              style={[styles.checkbox, includePreOrder && styles.checkboxActive]}
+              onPress={() => setIncludePreOrder(!includePreOrder)}
+            >
+              <Text style={styles.checkboxText}>{includePreOrder ? '✓ 預點餐' : '不預點'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
       <TouchableOpacity
-        style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+        style={[styles.submitButton, (submitting || !canReserve) && styles.submitButtonDisabled]}
         onPress={handleBooking}
-        disabled={submitting}
+        disabled={submitting || !canReserve}
       >
         {submitting ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text style={styles.submitButtonText}>確認並提交預約</Text>
+          <Text style={styles.submitButtonText}>
+            {canReserve ? "確認並提交預約" : "目前暫停線上預約"}
+          </Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -253,6 +301,24 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 40,
+  },
+  pausedCard: {
+    backgroundColor: '#fff3cd',
+    borderWidth: 1,
+    borderColor: '#ffe69c',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 14,
+  },
+  pausedTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#664d03',
+    marginBottom: 4,
+  },
+  pausedSub: {
+    fontSize: 12,
+    color: '#664d03',
   },
   sectionTitle: {
     fontSize: 16,

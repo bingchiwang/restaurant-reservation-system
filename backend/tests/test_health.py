@@ -18,3 +18,4 @@ def test_database_initialization(db_conn):
     assert "menu_items" in tables
     assert "orders" in tables
     assert "order_items" in tables
+    assert "store_settings" in tables

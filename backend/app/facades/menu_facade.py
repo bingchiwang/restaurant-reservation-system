@@ -1,6 +1,7 @@
 from flask import has_app_context, current_app
 from backend.app.utils.db import get_connection
 from backend.app.daos.menu_dao import MenuDAO
+from backend.app.daos.system_dao import SystemDAO
 from backend.app.services.menu_service import MenuService
 
 class MenuFacade:
@@ -14,7 +15,8 @@ class MenuFacade:
             config = current_app.config if has_app_context() else None
             conn = get_connection(config) if config else get_connection()
         dao = MenuDAO(conn)
-        service = MenuService(dao)
+        sys_dao = SystemDAO(conn)
+        service = MenuService(dao, system_dao=sys_dao)
         return conn, service
 
     def list_categories(self, status="ACTIVE"):
@@ -86,6 +88,15 @@ class MenuFacade:
         conn, service = self._get_service()
         try:
             return service.update_item_availability(item_id, is_available)
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def create_category(self, name: str, status: str = "ACTIVE", sort_order: int = 0):
+        """Admin: Creates a new menu category."""
+        conn, service = self._get_service()
+        try:
+            return service.create_category(name=name, status=status, sort_order=sort_order)
         finally:
             if not self._external_conn:
                 conn.close()

@@ -14,6 +14,7 @@ def list_orders():
     reservation_id = request.args.get("reservation_id")
     table_id = request.args.get("table_id")
     date_str = request.args.get("date")
+    sort_order = request.args.get("sort", "desc")
     limit = int(request.args.get("limit", 50))
     offset = int(request.args.get("offset", 0))
 
@@ -23,6 +24,7 @@ def list_orders():
         reservation_id=int(reservation_id) if reservation_id else None,
         table_id=int(table_id) if table_id else None,
         date_str=date_str,
+        sort_order=sort_order,
         limit=limit,
         offset=offset
     )
@@ -31,6 +33,46 @@ def list_orders():
         "count": len(orders),
         "data": orders
     }), 200
+
+@admin_order_bp.route("/<int:order_id>", methods=["PATCH"])
+@admin_required
+def update_order_content(order_id):
+    """管理端更改訂單內容（桌號、餐點項目與數量，後端重算金額）"""
+    data = request.get_json() or {}
+    table_id = data.get("table_id")
+    items = data.get("items")
+
+    if table_id is None and items is None:
+        return jsonify({
+            "success": False,
+            "error": "BAD_REQUEST",
+            "message": "Provide 'table_id' and/or 'items' to update order"
+        }), 400
+
+    facade = OrderFacade()
+    try:
+        updated = facade.admin_update_order(
+            order_id=order_id,
+            table_id=table_id,
+            items=items
+        )
+        return jsonify({
+            "success": True,
+            "message": "Order updated successfully",
+            "data": updated
+        }), 200
+    except LookupError as e:
+        return jsonify({
+            "success": False,
+            "error": "NOT_FOUND",
+            "message": str(e)
+        }), 404
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": "BAD_REQUEST",
+            "message": str(e)
+        }), 400
 
 @admin_order_bp.route("/<int:order_id>/status", methods=["PATCH"])
 @admin_required

@@ -196,5 +196,23 @@ def init_sqlite_db(conn):
         FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
         FOREIGN KEY (item_id) REFERENCES menu_items(item_id) ON DELETE RESTRICT
     );
+
+    CREATE TABLE IF NOT EXISTS store_settings (
+        setting_id INTEGER PRIMARY KEY,
+        store_status TEXT NOT NULL DEFAULT 'OPEN',
+        reservations_enabled INTEGER NOT NULL DEFAULT 1,
+        ordering_enabled INTEGER NOT NULL DEFAULT 1,
+        pre_order_enabled INTEGER NOT NULL DEFAULT 1,
+        announcement_text TEXT NOT NULL DEFAULT '',
+        announcement_type TEXT NOT NULL DEFAULT 'info',
+        opening_time TEXT NOT NULL DEFAULT '11:00',
+        closing_time TEXT NOT NULL DEFAULT '21:30',
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT OR IGNORE INTO store_settings (
+        setting_id, store_status, reservations_enabled, ordering_enabled,
+        pre_order_enabled, announcement_text, announcement_type, opening_time, closing_time
+    ) VALUES (1, 'OPEN', 1, 1, 1, '', 'info', '11:00', '21:30');
     """)
     conn.commit()

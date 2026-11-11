@@ -1,8 +1,13 @@
 from decimal import Decimal
 
 class MenuService:
-    def __init__(self, menu_dao):
+    def __init__(self, menu_dao, system_dao=None):
         self.menu_dao = menu_dao
+        self.system_dao = system_dao
+
+    def _touch_system(self):
+        if self.system_dao is not None:
+            self.system_dao.touch_updated_at()
 
     def get_categories(self, status="ACTIVE"):
         """
@@ -86,6 +91,7 @@ class MenuService:
             is_available=1 if is_available else 0,
             image_url=image_url
         )
+        self._touch_system()
         return self.get_item_by_id(item_id)
 
     def update_menu_item(self, item_id, fields: dict):
@@ -134,6 +140,7 @@ class MenuService:
 
         if cleaned:
             self.menu_dao.update_item(item_id, cleaned)
+            self._touch_system()
 
         return self.get_item_by_id(item_id)
 
@@ -146,4 +153,15 @@ class MenuService:
             raise LookupError(f"Menu item {item_id} not found")
 
         self.menu_dao.update_availability(item_id, is_available)
+        self._touch_system()
         return self.get_item_by_id(item_id)
+
+    def create_category(self, name: str, status: str = "ACTIVE", sort_order: int = 0):
+        if not name or not str(name).strip():
+            raise ValueError("Category name cannot be empty")
+        cat_status = str(status or "ACTIVE").strip().upper()
+        if cat_status not in ("ACTIVE", "HIDDEN"):
+            raise ValueError("Invalid category status")
+        cid = self.menu_dao.create_category(str(name).strip(), cat_status, int(sort_order or 0))
+        self._touch_system()
+        return self.menu_dao.get_category_by_id(cid)

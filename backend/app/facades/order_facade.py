@@ -40,10 +40,26 @@ class OrderFacade:
             if not self._external_conn:
                 conn.close()
 
-    def admin_list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, limit=50, offset=0):
+    def admin_list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, sort_order="desc", limit=50, offset=0):
         conn, service = self._get_service()
         try:
-            return service.list_orders(status=status, reservation_id=reservation_id, table_id=table_id, date_str=date_str, limit=limit, offset=offset)
+            return service.list_orders(
+                status=status,
+                reservation_id=reservation_id,
+                table_id=table_id,
+                date_str=date_str,
+                sort_order=sort_order,
+                limit=limit,
+                offset=offset,
+            )
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def admin_update_order(self, order_id: int, table_id=None, items=None):
+        conn, service = self._get_service()
+        try:
+            return service.admin_update_order(order_id, table_id=table_id, items_input=items)
         finally:
             if not self._external_conn:
                 conn.close()

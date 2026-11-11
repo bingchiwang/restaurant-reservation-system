@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MenuAPI } from '../api/client';
 import { useCart } from '../context/CartContext';
+import { useSystemConfig } from '../context/SystemConfigContext';
 
 export default function MenuScreen({ onNavigateToCart }) {
   const [categories, setCategories] = useState([]);
@@ -18,16 +19,11 @@ export default function MenuScreen({ onNavigateToCart }) {
   const [loading, setLoading] = useState(true);
 
   const { addItem, totalCount, totalAmount } = useCart();
+  const { config } = useSystemConfig();
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
+  const canOrder = config.store_status === 'OPEN' && config.ordering_enabled;
 
-  useEffect(() => {
-    loadMenuItems(selectedCategory);
-  }, [selectedCategory]);
-
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       const res = await MenuAPI.getCategories();
       if (res.success) {
@@ -36,10 +32,10 @@ export default function MenuScreen({ onNavigateToCart }) {
     } catch (err) {
       console.warn("無法取得餐點分類，使用預設值", err);
     }
-  };
+  }, []);
 
-  const loadMenuItems = async (catId) => {
-    setLoading(true);
+  const loadMenuItems = useCallback(async (catId, showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       const res = await MenuAPI.getItems(catId);
       if (res.success) {
@@ -48,11 +44,23 @@ export default function MenuScreen({ onNavigateToCart }) {
     } catch (err) {
       Alert.alert("載入失敗", "無法取得菜單，請確認後端服務已啟動");
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories, config.updated_at]);
+
+  useEffect(() => {
+    loadMenuItems(selectedCategory, items.length === 0);
+  }, [selectedCategory, config.updated_at, loadMenuItems]);
 
   const handleAddToCart = (item) => {
+    if (!canOrder) {
+      Alert.alert("暫停點餐", "目前後端管理員已暫停點餐功能");
+      return;
+    }
     addItem(item);
   };
 
@@ -83,10 +91,13 @@ export default function MenuScreen({ onNavigateToCart }) {
         <View style={styles.cardFooter}>
           <Text style={styles.categoryBadge}>{item.category_name}</Text>
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, !canOrder && styles.addButtonDisabled]}
             onPress={() => handleAddToCart(item)}
+            disabled={!canOrder}
           >
-            <Text style={styles.addButtonText}>+ 加入購物車</Text>
+            <Text style={styles.addButtonText}>
+              {canOrder ? "+ 加入購物車" : "暫停點餐"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -95,6 +106,14 @@ export default function MenuScreen({ onNavigateToCart }) {
 
   return (
     <View style={styles.container}>
+      {!canOrder && (
+        <View style={styles.pausedBanner}>
+          <Text style={styles.pausedBannerText}>
+            ⚠️ 目前暫停線上／現場點餐服務，僅供瀏覽菜單
+          </Text>
+        </View>
+      )}
+
       {/* Category Filter Bar */}
       <View style={styles.filterBar}>
         <TouchableOpacity
@@ -152,6 +171,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  pausedBanner: {
+    backgroundColor: '#fff3cd',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffe69c',
+  },
+  pausedBannerText: {
+    color: '#664d03',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   filterBar: {
     flexDirection: 'row',
@@ -238,6 +270,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
+  },
+  addButtonDisabled: {
+    backgroundColor: '#adb5bd',
   },
   addButtonText: {
     color: '#ffffff',
