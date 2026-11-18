@@ -44,14 +44,22 @@ def seed_data():
             (3, '手工冷萃咖啡', '精選產區咖啡豆經 16 小時慢速冷萃', 120.00, 1)
         """)
 
-    # 4. Seed Admin User if empty
-    cursor.execute("SELECT COUNT(*) as cnt FROM users")
+    # 4. Seed Admin & Demo Member User if missing
+    cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE role = 'ADMIN'")
     if cursor.fetchone()["cnt"] == 0:
         admin_pwd = hash_password("admin123")
         cursor.execute("""
             INSERT INTO users (email, password_hash, display_name, role, status)
             VALUES ('admin@restaurant.com', ?, '系統管理員', 'ADMIN', 'ACTIVE')
         """, (admin_pwd,))
+
+    cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE role = 'MEMBER'")
+    if cursor.fetchone()["cnt"] == 0:
+        member_pwd = hash_password("member123")
+        cursor.execute("""
+            INSERT INTO users (email, password_hash, display_name, role, status)
+            VALUES ('member@restaurant.com', ?, '示範會員', 'MEMBER', 'ACTIVE')
+        """, (member_pwd,))
 
     conn.commit()
     conn.close()

@@ -105,9 +105,9 @@ class ReservationService:
         candidates.sort(key=lambda t: (t["capacity"] - party_size, t["table_id"]))
         return candidates[0]
 
-    def create_guest_reservation(self, party_size, reservation_time_str, guest_name, guest_phone, note=None, items=None):
+    def create_guest_reservation(self, party_size, reservation_time_str, guest_name, guest_phone, note=None, items=None, user_id=None):
         """
-        REQ-002, REQ-003 & REQ-006: 訪客預約（可包含預約時預點餐原子交易）
+        REQ-002, REQ-003 & REQ-006: 訪客或會員預約（可包含預約時預點餐原子交易）
         """
         settings = self.system_dao.get_settings()
         store_status = settings.get("store_status", "OPEN")
@@ -149,7 +149,7 @@ class ReservationService:
             
             res_id = self.reservation_dao.create_reservation(
                 reservation_code=res_code,
-                user_id=None,
+                user_id=user_id,
                 party_size=party_size,
                 start_at=start_str,
                 end_at=end_str,
@@ -170,7 +170,7 @@ class ReservationService:
             order_data = None
             if items and validated_items:
                 order_id = order_svc.order_dao.create_order(
-                    user_id=None,
+                    user_id=user_id,
                     reservation_id=res_id,
                     table_id=best_table["table_id"],
                     order_type="PRE_ORDER",
@@ -247,6 +247,10 @@ class ReservationService:
 
         self.reservation_dao.update_status(res["reservation_id"], "CANCELLED")
         return self.reservation_dao.get_by_id(res["reservation_id"])
+
+    def list_member_reservations(self, user_id: int, limit: int = 50, offset: int = 0):
+        """REQ-015: 會員查詢個人歷史預約"""
+        return self.reservation_dao.list_by_user(user_id=user_id, limit=limit, offset=offset)
 
     # Admin Methods (REQ-012)
     def admin_list_reservations(self, date_str=None, status=None, sort_order="asc", limit=50, offset=0):

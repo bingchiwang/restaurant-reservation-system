@@ -215,11 +215,12 @@ class OrderService:
             self.conn.rollback()
             raise
 
-    def list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, sort_order="desc", limit=50, offset=0):
+    def list_orders(self, status=None, reservation_id=None, table_id=None, user_id=None, date_str=None, sort_order="desc", limit=50, offset=0):
         orders = self.order_dao.list_orders(
             status=status,
             reservation_id=reservation_id,
             table_id=table_id,
+            user_id=user_id,
             date_str=date_str,
             sort_order=sort_order,
             limit=limit,

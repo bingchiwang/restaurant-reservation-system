@@ -10,15 +10,18 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { CartProvider, useCart } from './src/context/CartContext';
 import { SystemConfigProvider, useSystemConfig } from './src/context/SystemConfigContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import MenuScreen from './src/screens/MenuScreen';
 import ReservationScreen from './src/screens/ReservationScreen';
 import CartScreen from './src/screens/CartScreen';
 import ReservationLookupScreen from './src/screens/ReservationLookupScreen';
+import MemberScreen from './src/screens/MemberScreen';
 
 function MainApp() {
   const [currentTab, setCurrentTab] = useState('menu');
   const { totalCount } = useCart();
   const { config, refreshConfig } = useSystemConfig();
+  const { user, isLoggedIn } = useAuth();
   const { width } = useWindowDimensions();
   const isWebWide = width > 768;
 
@@ -63,6 +66,8 @@ function MainApp() {
         return <CartScreen onNavigateToReservation={() => setCurrentTab('reservation')} />;
       case 'lookup':
         return <ReservationLookupScreen />;
+      case 'member':
+        return <MemberScreen />;
       default:
         return <MenuScreen onNavigateToCart={() => setCurrentTab('cart')} />;
     }
@@ -80,6 +85,8 @@ function MainApp() {
           <Text style={styles.headerSubtitle}>
             營業時間 {config.opening_time} ~ {config.closing_time} ‧{' '}
             {config.store_status === 'OPEN' ? '🟢 營業中' : config.store_status === 'CLOSED' ? '🟡 休息中' : '🔴 維護中'}
+            {' ‧ '}
+            {isLoggedIn ? `👤 ${user.display_name}` : '訪客模式'}
           </Text>
         </View>
 
@@ -154,6 +161,16 @@ function MainApp() {
               查詢預約
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, currentTab === 'member' && styles.tabItemActive]}
+            onPress={() => setCurrentTab('member')}
+          >
+            <Text style={styles.tabIcon}>{isLoggedIn ? '🙋' : '👤'}</Text>
+            <Text style={[styles.tabText, currentTab === 'member' && styles.tabTextActive]}>
+              {isLoggedIn ? '會員' : '登入'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -163,9 +180,11 @@ function MainApp() {
 export default function App() {
   return (
     <SystemConfigProvider>
-      <CartProvider>
-        <MainApp />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <MainApp />
+        </CartProvider>
+      </AuthProvider>
     </SystemConfigProvider>
   );
 }

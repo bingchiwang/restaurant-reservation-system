@@ -12,11 +12,13 @@ import {
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
+import { useAuth } from '../context/AuthContext';
 import { OrderAPI } from '../api/client';
 
 export default function CartScreen({ onNavigateToReservation }) {
   const { cartItems, updateQuantity, removeItem, clearCart, totalAmount, totalCount } = useCart();
   const { config } = useSystemConfig();
+  const { token } = useAuth();
   const [tableNumber, setTableNumber] = useState('');
   const [ordering, setOrdering] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(null);
@@ -47,7 +49,7 @@ export default function CartScreen({ onNavigateToReservation }) {
         quantity: i.quantity,
         note: i.note
       }));
-      const res = await OrderAPI.createDineInOrder(tableId, payloadItems);
+      const res = await OrderAPI.createDineInOrder(tableId, payloadItems, token);
       if (res.success) {
         setOrderConfirmed(res.data);
         clearCart();

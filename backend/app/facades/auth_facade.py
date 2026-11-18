@@ -17,10 +17,10 @@ class AuthFacade:
         service = AuthService(dao)
         return conn, service
 
-    def login(self, email: str, password: str):
+    def login(self, email: str, password: str, member_only: bool = False):
         conn, service = self._get_service()
         try:
-            return service.authenticate(email, password)
+            return service.authenticate(email, password, member_only=member_only)
         finally:
             if not self._external_conn:
                 conn.close()
@@ -29,6 +29,22 @@ class AuthFacade:
         conn, service = self._get_service()
         try:
             return service.register_user(email, password, display_name, role)
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def get_profile(self, user_id: int):
+        conn, service = self._get_service()
+        try:
+            return service.get_profile(user_id)
+        finally:
+            if not self._external_conn:
+                conn.close()
+
+    def update_profile(self, user_id: int, fields: dict):
+        conn, service = self._get_service()
+        try:
+            return service.update_profile(user_id, fields)
         finally:
             if not self._external_conn:
                 conn.close()

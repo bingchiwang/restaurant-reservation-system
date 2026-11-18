@@ -12,6 +12,7 @@ import {
 import { ReservationAPI } from '../api/client';
 import { useCart } from '../context/CartContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
+import { useAuth } from '../context/AuthContext';
 
 function buildTimeSlots(openStr, closeStr) {
   const [oh, om] = (openStr || '11:00').split(':').map(Number);
@@ -49,6 +50,13 @@ export default function ReservationScreen({ onBookingSuccess }) {
   const [confirmedBooking, setConfirmedBooking] = useState(null);
 
   const { cartItems, totalAmount, totalCount, clearCart } = useCart();
+  const { token, user, isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    if (isLoggedIn && user?.display_name && !guestName) {
+      setGuestName(user.display_name);
+    }
+  }, [isLoggedIn, user]);
 
   useEffect(() => {
     if (availableTimes.length > 0 && !availableTimes.includes(selectedTime)) {
@@ -92,7 +100,7 @@ export default function ReservationScreen({ onBookingSuccess }) {
 
     setSubmitting(true);
     try {
-      const res = await ReservationAPI.createReservation(payload);
+      const res = await ReservationAPI.createReservation(payload, token);
       if (res.success) {
         setConfirmedBooking(res.data);
         if (canPreOrder && includePreOrder && cartItems.length > 0) {
@@ -222,7 +230,9 @@ export default function ReservationScreen({ onBookingSuccess }) {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>3. 訂位聯絡資料 (訪客免註冊)</Text>
+      <Text style={styles.sectionTitle}>
+        3. 訂位聯絡資料 ({isLoggedIn ? `已登入會員：${user.display_name}` : '訪客免註冊'})
+      </Text>
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>聯絡人姓名 *</Text>
         <TextInput

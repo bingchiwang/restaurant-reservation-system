@@ -31,3 +31,20 @@ class UserDAO:
                 VALUES (?, ?, ?, ?, ?)
             """, (email.strip().lower(), password_hash, display_name, role, status))
             return cursor.lastrowid
+
+    def update_user(self, user_id: int, fields: dict):
+        """Updates allowed user profile fields (display_name, password_hash)."""
+        allowed = {"display_name", "password_hash"}
+        update_cols = []
+        params = []
+        for k, v in fields.items():
+            if k in allowed:
+                update_cols.append(f"{k} = ?")
+                params.append(v)
+        if not update_cols:
+            return False
+        params.append(user_id)
+        sql = f"UPDATE users SET {', '.join(update_cols)}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
+        with get_db_cursor(self.conn, commit=True) as cursor:
+            cursor.execute(sql, tuple(params))
+            return cursor.rowcount > 0

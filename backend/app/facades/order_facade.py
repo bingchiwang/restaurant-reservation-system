@@ -40,6 +40,15 @@ class OrderFacade:
             if not self._external_conn:
                 conn.close()
 
+    def list_member_orders(self, user_id: int, limit: int = 50, offset: int = 0):
+        """REQ-015: 會員查詢個人歷史訂單"""
+        conn, service = self._get_service()
+        try:
+            return service.list_orders(user_id=user_id, sort_order="desc", limit=limit, offset=offset)
+        finally:
+            if not self._external_conn:
+                conn.close()
+
     def admin_list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, sort_order="desc", limit=50, offset=0):
         conn, service = self._get_service()
         try:

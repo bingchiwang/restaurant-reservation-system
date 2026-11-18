@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from backend.app.facades.reservation_facade import ReservationFacade
 from backend.app.services.reservation_service import NoAvailableTableError
 from backend.app.utils.exceptions import FeatureDisabledError
+from backend.app.utils.auth import get_optional_current_user
 
 reservation_bp = Blueprint("reservation", __name__, url_prefix="/api/v1/reservations")
 
@@ -29,6 +30,9 @@ def create_reservation():
             "message": "party_size, reservation_time, guest_name, and guest_phone are required"
         }), 400
 
+    current_user = get_optional_current_user()
+    user_id = current_user["user_id"] if current_user else None
+
     facade = ReservationFacade()
     try:
         reservation = facade.create_guest_reservation(
@@ -37,7 +41,8 @@ def create_reservation():
             guest_name=guest_name,
             guest_phone=guest_phone,
             note=note,
-            items=items
+            items=items,
+            user_id=user_id
         )
         return jsonify({
             "success": True,
@@ -66,12 +71,14 @@ def create_reservation():
 @reservation_bp.route("/<string:reservation_code>", methods=["GET"])
 def get_reservation(reservation_code):
     """
-    REQ-004: 查詢預約 (支援電話驗證，避免任意猜測編號)
+    REQ-004: 查詢預約 (支援電話驗證或登入會員本人查詢)
     """
     phone = request.args.get("phone")
+    current_user = get_optional_current_user()
+    user_id = current_user["user_id"] if current_user else None
     facade = ReservationFacade()
     try:
-        res = facade.get_reservation_by_code(reservation_code, phone=phone, is_admin=False)
+        res = facade.get_reservation_by_code(reservation_code, phone=phone, user_id=user_id, is_admin=False)
         if not res:
             return jsonify({
                 "success": False,
@@ -92,14 +99,16 @@ def get_reservation(reservation_code):
 @reservation_bp.route("/<string:reservation_code>/cancel", methods=["POST"])
 def cancel_reservation(reservation_code):
     """
-    REQ-004: 顧客取消預約
+    REQ-004: 顧客取消預約（支援電話驗證或登入會員本人取消）
     """
     data = request.get_json() or {}
     phone = data.get("phone")
+    current_user = get_optional_current_user()
+    user_id = current_user["user_id"] if current_user else None
 
     facade = ReservationFacade()
     try:
-        cancelled = facade.cancel_reservation(reservation_code, phone=phone, is_admin=False)
+        cancelled = facade.cancel_reservation(reservation_code, phone=phone, user_id=user_id, is_admin=False)
         return jsonify({
             "success": True,
             "message": "Reservation has been successfully cancelled",

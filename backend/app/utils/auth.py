@@ -65,6 +65,14 @@ def decode_token(token: str):
     except Exception:
         return None
 
+def get_optional_current_user():
+    """Returns decoded token payload if a valid Bearer token is present, otherwise None."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ", 1)[1].strip()
+    return decode_token(token)
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

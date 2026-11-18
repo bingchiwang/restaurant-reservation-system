@@ -151,3 +151,32 @@ class ReservationDAO:
             cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
+
+    def list_by_user(self, user_id: int, limit: int = 50, offset: int = 0):
+        """Lists reservations belonging to a specific member, newest first."""
+        with get_db_cursor(self.conn) as cursor:
+            cursor.execute("""
+                SELECT 
+                    r.reservation_id,
+                    r.reservation_code,
+                    r.user_id,
+                    r.party_size,
+                    r.start_at,
+                    r.end_at,
+                    r.status,
+                    r.created_at,
+                    g.guest_name,
+                    g.guest_phone,
+                    t.table_id,
+                    dt.table_name,
+                    dt.capacity
+                FROM reservations r
+                LEFT JOIN reservation_guests g ON r.reservation_id = g.reservation_id
+                LEFT JOIN reservation_tables t ON r.reservation_id = t.reservation_id
+                LEFT JOIN dining_tables dt ON t.table_id = dt.table_id
+                WHERE r.user_id = ?
+                ORDER BY r.start_at DESC, r.reservation_id DESC
+                LIMIT ? OFFSET ?
+            """, (user_id, limit, offset))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]

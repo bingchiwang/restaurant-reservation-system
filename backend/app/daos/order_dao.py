@@ -85,7 +85,7 @@ class OrderDAO:
             """, (new_status, order_id))
             return cursor.rowcount > 0
 
-    def list_orders(self, status=None, reservation_id=None, table_id=None, date_str=None, sort_order="desc", limit=50, offset=0):
+    def list_orders(self, status=None, reservation_id=None, table_id=None, user_id=None, date_str=None, sort_order="desc", limit=50, offset=0):
         order_dir = "ASC" if str(sort_order or "").lower() == "asc" else "DESC"
         query = """
             SELECT 
@@ -112,6 +112,9 @@ class OrderDAO:
         if table_id:
             query += " AND o.table_id = ?"
             params.append(table_id)
+        if user_id is not None:
+            query += " AND o.user_id = ?"
+            params.append(user_id)
         if date_str:
             query += " AND DATE(o.created_at) = DATE(?)"
             params.append(date_str)

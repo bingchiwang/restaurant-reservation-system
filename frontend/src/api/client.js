@@ -13,12 +13,15 @@ const getApiBaseUrl = () => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
-async function request(endpoint, options = {}) {
+async function request(endpoint, options = {}, token = null) {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {})
   };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   try {
     const response = await fetch(url, {
@@ -40,6 +43,35 @@ export const SystemAPI = {
   getConfig: () => request("/system/config")
 };
 
+export const MemberAPI = {
+  login: (email, password) =>
+    request("/auth/member/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    }),
+  register: (email, password, displayName) =>
+    request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, display_name: displayName })
+    }),
+  logout: () =>
+    request("/auth/logout", {
+      method: "POST"
+    }),
+  getProfile: (token) => request("/me", {}, token),
+  updateProfile: (token, data) =>
+    request(
+      "/me",
+      {
+        method: "PATCH",
+        body: JSON.stringify(data)
+      },
+      token
+    ),
+  getMyReservations: (token) => request("/me/reservations", {}, token),
+  getMyOrders: (token) => request("/me/orders", {}, token)
+};
+
 export const MenuAPI = {
   getCategories: () => request("/menu/categories"),
   getItems: (categoryId = null) => {
@@ -50,29 +82,42 @@ export const MenuAPI = {
 };
 
 export const ReservationAPI = {
-  createReservation: (reservationData) => {
-    return request("/reservations", {
-      method: "POST",
-      body: JSON.stringify(reservationData)
-    });
+  createReservation: (reservationData, token = null) => {
+    return request(
+      "/reservations",
+      {
+        method: "POST",
+        body: JSON.stringify(reservationData)
+      },
+      token
+    );
   },
-  getReservation: (code, phone) => {
-    return request(`/reservations/${encodeURIComponent(code)}?phone=${encodeURIComponent(phone)}`);
+  getReservation: (code, phone, token = null) => {
+    const query = phone ? `?phone=${encodeURIComponent(phone)}` : "";
+    return request(`/reservations/${encodeURIComponent(code)}${query}`, {}, token);
   },
-  cancelReservation: (code, phone) => {
-    return request(`/reservations/${encodeURIComponent(code)}/cancel`, {
-      method: "POST",
-      body: JSON.stringify({ phone })
-    });
+  cancelReservation: (code, phone = null, token = null) => {
+    return request(
+      `/reservations/${encodeURIComponent(code)}/cancel`,
+      {
+        method: "POST",
+        body: JSON.stringify(phone ? { phone } : {})
+      },
+      token
+    );
   }
 };
 
 export const OrderAPI = {
-  createDineInOrder: (tableId, items) => {
-    return request("/orders", {
-      method: "POST",
-      body: JSON.stringify({ table_id: tableId, items })
-    });
+  createDineInOrder: (tableId, items, token = null) => {
+    return request(
+      "/orders",
+      {
+        method: "POST",
+        body: JSON.stringify({ table_id: tableId, items })
+      },
+      token
+    );
   },
-  getOrder: (orderId) => request(`/orders/${orderId}`)
+  getOrder: (orderId, token = null) => request(`/orders/${orderId}`, {}, token)
 };
