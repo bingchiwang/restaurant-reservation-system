@@ -57,9 +57,17 @@ def seed_data():
     if cursor.fetchone()["cnt"] == 0:
         member_pwd = hash_password("member123")
         cursor.execute("""
-            INSERT INTO users (email, password_hash, display_name, role, status)
-            VALUES ('member@restaurant.com', ?, '示範會員', 'MEMBER', 'ACTIVE')
+            INSERT INTO users (email, password_hash, display_name, phone, gender, birthday, role, status)
+            VALUES ('member@restaurant.com', ?, '示範會員', '0912345678', 'OTHER', '1998-01-01', 'MEMBER', 'ACTIVE')
         """, (member_pwd,))
+    else:
+        cursor.execute("""
+            UPDATE users
+            SET phone = COALESCE(phone, '0912345678'),
+                gender = COALESCE(gender, 'OTHER'),
+                birthday = COALESCE(birthday, '1998-01-01')
+            WHERE email = 'member@restaurant.com'
+        """)
 
     conn.commit()
     conn.close()

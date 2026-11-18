@@ -25,10 +25,27 @@ class AuthFacade:
             if not self._external_conn:
                 conn.close()
 
-    def register(self, email: str, password: str, display_name: str, role: str = "MEMBER"):
+    def register(
+        self,
+        email: str,
+        password: str,
+        display_name: str,
+        phone: str = None,
+        gender: str = None,
+        birthday: str = None,
+        role: str = "MEMBER",
+    ):
         conn, service = self._get_service()
         try:
-            return service.register_user(email, password, display_name, role)
+            return service.register_user(
+                email=email,
+                password=password,
+                display_name=display_name,
+                phone=phone,
+                gender=gender,
+                birthday=birthday,
+                role=role,
+            )
         finally:
             if not self._external_conn:
                 conn.close()

@@ -485,6 +485,9 @@ DAO：
 - email：VARCHAR，帳號識別資料。
 - password_hash：VARCHAR，密碼雜湊。
 - display_name：VARCHAR，顯示名稱。
+- phone：VARCHAR，聯絡電話（新會員註冊必填）。
+- gender：VARCHAR，性別（MALE / FEMALE / OTHER / PREFER_NOT_TO_SAY，新會員註冊必填）。
+- birthday：DATE，生日（YYYY-MM-DD，新會員註冊必填）。
 - role：VARCHAR，使用者角色。
 - status：VARCHAR，帳號狀態。
 - created_at：DATETIME，建立時間。

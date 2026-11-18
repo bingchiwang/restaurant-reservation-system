@@ -53,16 +53,27 @@ def member_login():
 @auth_bp.route("/register", methods=["POST"])
 def register():
     """
-    REQ-011: 會員註冊
+    REQ-011: 會員註冊（需包含電話號碼、性別、生日）
     """
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
     display_name = data.get("display_name")
+    phone = data.get("phone")
+    gender = data.get("gender")
+    birthday = data.get("birthday")
 
     facade = AuthFacade()
     try:
-        user = facade.register(email, password, display_name, role="MEMBER")
+        user = facade.register(
+            email=email,
+            password=password,
+            display_name=display_name,
+            phone=phone,
+            gender=gender,
+            birthday=birthday,
+            role="MEMBER",
+        )
         token = generate_token(
             user_id=user["user_id"],
             role=user["role"],
@@ -75,6 +86,9 @@ def register():
                 "user_id": user["user_id"],
                 "email": user["email"],
                 "display_name": user["display_name"],
+                "phone": user.get("phone") or "",
+                "gender": user.get("gender") or "",
+                "birthday": str(user.get("birthday") or ""),
                 "role": user["role"],
                 "token": token
             }

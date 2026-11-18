@@ -106,6 +106,9 @@ def init_sqlite_db(conn):
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         display_name TEXT NOT NULL,
+        phone TEXT,
+        gender TEXT,
+        birthday TEXT,
         role TEXT NOT NULL DEFAULT 'MEMBER',
         status TEXT NOT NULL DEFAULT 'ACTIVE',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -215,4 +218,12 @@ def init_sqlite_db(conn):
         pre_order_enabled, announcement_text, announcement_type, opening_time, closing_time
     ) VALUES (1, 'OPEN', 1, 1, 1, '', 'info', '11:00', '21:30');
     """)
+
+    # Safe schema migration for existing SQLite databases missing new user profile columns
+    cursor.execute("PRAGMA table_info(users);")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    for col_name in ("phone", "gender", "birthday"):
+        if col_name not in existing_cols:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} TEXT;")
+
     conn.commit()

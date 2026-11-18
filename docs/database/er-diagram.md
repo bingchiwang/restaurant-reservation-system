@@ -22,6 +22,9 @@ erDiagram
         string email UK
         string password_hash
         string display_name
+        string phone
+        string gender
+        date birthday
         string role
         string status
         datetime created_at

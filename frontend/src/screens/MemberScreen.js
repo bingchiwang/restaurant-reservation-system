@@ -12,6 +12,18 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { MemberAPI, ReservationAPI } from '../api/client';
 
+const GENDER_OPTIONS = [
+  { value: 'MALE', label: '男' },
+  { value: 'FEMALE', label: '女' },
+  { value: 'OTHER', label: '其他' },
+  { value: 'PREFER_NOT_TO_SAY', label: '不願透露' }
+];
+
+function formatGenderLabel(val) {
+  const found = GENDER_OPTIONS.find(g => g.value === val);
+  return found ? found.label : (val || '未設定');
+}
+
 export default function MemberScreen() {
   const { token, user, isLoggedIn, login, register, logout, updateProfile } = useAuth();
 
@@ -20,6 +32,9 @@ export default function MemberScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('MALE');
+  const [birthday, setBirthday] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Member Dashboard state
@@ -29,8 +44,11 @@ export default function MemberScreen() {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Profile Edit state
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editGender, setEditGender] = useState('MALE');
+  const [editBirthday, setEditBirthday] = useState('');
 
   const loadHistory = useCallback(async () => {
     if (!token || !isLoggedIn) return;
@@ -60,9 +78,23 @@ export default function MemberScreen() {
       Alert.alert('請填寫完整資訊', '請輸入電子郵件與密碼');
       return;
     }
-    if (authMode === 'register' && !displayName.trim()) {
-      Alert.alert('請填寫暱稱', '請輸入顯示名稱');
-      return;
+    if (authMode === 'register') {
+      if (!displayName.trim()) {
+        Alert.alert('請填寫姓名', '請輸入顯示名稱');
+        return;
+      }
+      if (!phone.trim()) {
+        Alert.alert('請填寫電話號碼', '請輸入聯絡電話號碼');
+        return;
+      }
+      if (!gender) {
+        Alert.alert('請選擇性別', '請選擇您的性別');
+        return;
+      }
+      if (!birthday.trim()) {
+        Alert.alert('請填寫生日', '請輸入生日（格式 YYYY-MM-DD，例如 1998-05-20）');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -70,7 +102,14 @@ export default function MemberScreen() {
       if (authMode === 'login') {
         await login(email.trim(), password);
       } else {
-        await register(email.trim(), password, displayName.trim());
+        await register(
+          email.trim(),
+          password,
+          displayName.trim(),
+          phone.trim(),
+          gender,
+          birthday.trim()
+        );
         Alert.alert('註冊成功', '已為您自動登入會員帳號！');
       }
       setPassword('');
@@ -81,15 +120,20 @@ export default function MemberScreen() {
     }
   };
 
-  const handleSaveName = async () => {
-    if (!newName.trim()) {
-      Alert.alert('名稱不可為空', '請輸入有效顯示名稱');
+  const handleSaveProfile = async () => {
+    if (!editName.trim() || !editPhone.trim() || !editBirthday.trim()) {
+      Alert.alert('資料不完整', '名稱、電話與生日皆不可為空');
       return;
     }
     try {
-      await updateProfile({ display_name: newName.trim() });
-      setEditingName(false);
-      Alert.alert('更新成功', '會員暱稱已更新');
+      await updateProfile({
+        display_name: editName.trim(),
+        phone: editPhone.trim(),
+        gender: editGender,
+        birthday: editBirthday.trim()
+      });
+      setEditingProfile(false);
+      Alert.alert('更新成功', '會員資料已更新');
     } catch (err) {
       Alert.alert('更新失敗', err.message);
     }
@@ -168,15 +212,55 @@ export default function MemberScreen() {
           </View>
 
           {authMode === 'register' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>顯示名稱 / 姓名 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="例：王小明"
-                value={displayName}
-                onChangeText={setDisplayName}
-              />
-            </View>
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>顯示名稱 / 姓名 *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="例：王小明"
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>電話號碼 *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="例：0912345678"
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>性別 *</Text>
+                <View style={styles.genderRow}>
+                  {GENDER_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.genderChip, gender === opt.value && styles.genderChipActive]}
+                      onPress={() => setGender(opt.value)}
+                    >
+                      <Text style={[styles.genderText, gender === opt.value && styles.genderTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>生日 (YYYY-MM-DD) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="例：1998-05-20"
+                  value={birthday}
+                  onChangeText={setBirthday}
+                />
+              </View>
+            </>
           )}
 
           <View style={styles.inputGroup}>
@@ -228,36 +312,74 @@ export default function MemberScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.profileGreeting}>👤 {user.display_name}</Text>
             <Text style={styles.profileEmail}>{user.email}</Text>
+            <Text style={styles.profileMeta}>
+              📞 {user.phone || '未填寫'}  ‧  ⚧ {formatGenderLabel(user.gender)}  ‧  🎂 {user.birthday || '未填寫'}
+            </Text>
           </View>
           <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
             <Text style={styles.logoutBtnText}>登出</Text>
           </TouchableOpacity>
         </View>
 
-        {editingName ? (
-          <View style={styles.editNameRow}>
+        {editingProfile ? (
+          <View style={styles.editFormBox}>
+            <Text style={styles.editFieldLabel}>顯示名稱</Text>
             <TextInput
-              style={[styles.input, { flex: 1, marginBottom: 0 }]}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="輸入新名稱"
+              style={styles.input}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="輸入顯示名稱"
             />
-            <TouchableOpacity style={styles.saveNameBtn} onPress={handleSaveName}>
-              <Text style={styles.saveNameBtnText}>儲存</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelEditBtn} onPress={() => setEditingName(false)}>
-              <Text style={styles.cancelEditText}>取消</Text>
-            </TouchableOpacity>
+            <Text style={[styles.editFieldLabel, { marginTop: 8 }]}>電話號碼</Text>
+            <TextInput
+              style={styles.input}
+              value={editPhone}
+              onChangeText={setEditPhone}
+              placeholder="例：0912345678"
+              keyboardType="phone-pad"
+            />
+            <Text style={[styles.editFieldLabel, { marginTop: 8 }]}>性別</Text>
+            <View style={styles.genderRow}>
+              {GENDER_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.genderChip, editGender === opt.value && styles.genderChipActive]}
+                  onPress={() => setEditGender(opt.value)}
+                >
+                  <Text style={[styles.genderText, editGender === opt.value && styles.genderTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.editFieldLabel, { marginTop: 8 }]}>生日 (YYYY-MM-DD)</Text>
+            <TextInput
+              style={styles.input}
+              value={editBirthday}
+              onChangeText={setEditBirthday}
+              placeholder="例：1998-05-20"
+            />
+            <View style={styles.editActionRow}>
+              <TouchableOpacity style={styles.saveNameBtn} onPress={handleSaveProfile}>
+                <Text style={styles.saveNameBtnText}>儲存資料</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelEditBtn} onPress={() => setEditingProfile(false)}>
+                <Text style={styles.cancelEditText}>取消</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <TouchableOpacity
             style={styles.editProfileLink}
             onPress={() => {
-              setNewName(user.display_name);
-              setEditingName(true);
+              setEditName(user.display_name || '');
+              setEditPhone(user.phone || '');
+              setEditGender(user.gender || 'MALE');
+              setEditBirthday(user.birthday || '');
+              setEditingProfile(true);
             }}
           >
-            <Text style={styles.editProfileLinkText}>✏️ 修改顯示名稱</Text>
+            <Text style={styles.editProfileLinkText}>✏️ 修改會員資料</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -433,6 +555,31 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
   },
+  genderRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  genderChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f1f3f5',
+    borderWidth: 1,
+    borderColor: '#ced4da',
+  },
+  genderChipActive: {
+    backgroundColor: '#1d3557',
+    borderColor: '#1d3557',
+  },
+  genderText: {
+    fontSize: 13,
+    color: '#495057',
+    fontWeight: '600',
+  },
+  genderTextActive: {
+    color: '#ffffff',
+  },
   submitBtn: {
     backgroundColor: '#e63946',
     borderRadius: 10,
@@ -462,7 +609,7 @@ const styles = StyleSheet.create({
   },
   profileTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
   profileGreeting: {
@@ -474,6 +621,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6c757d',
     marginTop: 2,
+  },
+  profileMeta: {
+    fontSize: 12,
+    color: '#495057',
+    marginTop: 6,
   },
   logoutBtn: {
     paddingHorizontal: 12,
@@ -495,7 +647,19 @@ const styles = StyleSheet.create({
     color: '#457b9d',
     fontWeight: '600',
   },
-  editNameRow: {
+  editFormBox: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f3f5',
+  },
+  editFieldLabel: {
+    fontSize: 12,
+    color: '#495057',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  editActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -503,7 +667,7 @@ const styles = StyleSheet.create({
   },
   saveNameBtn: {
     backgroundColor: '#2a9d8f',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
   },

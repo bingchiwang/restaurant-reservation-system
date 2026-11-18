@@ -34,13 +34,13 @@ def seed_member_test_data(app):
     """, (hash_password("AdminPass123!"),))
 
     cursor.execute("""
-        INSERT INTO users (user_id, email, password_hash, display_name, role, status)
-        VALUES (2, 'alice@example.com', ?, 'Alice', 'MEMBER', 'ACTIVE')
+        INSERT INTO users (user_id, email, password_hash, display_name, phone, gender, birthday, role, status)
+        VALUES (2, 'alice@example.com', ?, 'Alice', '0912345678', 'FEMALE', '1997-05-20', 'MEMBER', 'ACTIVE')
     """, (hash_password("AlicePass123!"),))
 
     cursor.execute("""
-        INSERT INTO users (user_id, email, password_hash, display_name, role, status)
-        VALUES (3, 'bob@example.com', ?, 'Bob', 'MEMBER', 'ACTIVE')
+        INSERT INTO users (user_id, email, password_hash, display_name, phone, gender, birthday, role, status)
+        VALUES (3, 'bob@example.com', ?, 'Bob', '0922333444', 'MALE', '1995-11-11', 'MEMBER', 'ACTIVE')
     """, (hash_password("BobPass123!"),))
 
     cursor.execute("INSERT INTO dining_tables (table_id, table_name, capacity, status) VALUES (1, 'A-01', 2, 'ACTIVE')")
@@ -56,12 +56,15 @@ def seed_member_test_data(app):
     conn.close()
 
 def test_member_register_validation_and_login(client, seed_member_test_data):
-    """REQ-011: 會員註冊重複驗證、密碼長度驗證與登入錯誤不洩漏資訊"""
+    """REQ-011: 會員註冊重複驗證、電話/性別/生日欄位必填與格式驗證、登入錯誤不洩漏資訊"""
     # Duplicate email
     dup = client.post("/api/v1/auth/register", json={
         "email": "alice@example.com",
         "password": "Password123",
-        "display_name": "Alice2"
+        "display_name": "Alice2",
+        "phone": "0912345678",
+        "gender": "FEMALE",
+        "birthday": "1998-01-01"
     })
     assert dup.status_code == 400
     assert "already registered" in dup.get_json()["message"]
@@ -70,7 +73,10 @@ def test_member_register_validation_and_login(client, seed_member_test_data):
     short_pwd = client.post("/api/v1/auth/register", json={
         "email": "new@example.com",
         "password": "123",
-        "display_name": "NewUser"
+        "display_name": "NewUser",
+        "phone": "0912345678",
+        "gender": "MALE",
+        "birthday": "1998-01-01"
     })
     assert short_pwd.status_code == 400
 
@@ -78,19 +84,83 @@ def test_member_register_validation_and_login(client, seed_member_test_data):
     bad_email = client.post("/api/v1/auth/register", json={
         "email": "not-an-email",
         "password": "Password123",
-        "display_name": "NewUser"
+        "display_name": "NewUser",
+        "phone": "0912345678",
+        "gender": "MALE",
+        "birthday": "1998-01-01"
     })
     assert bad_email.status_code == 400
 
-    # Successful registration
+    # Missing phone / invalid phone
+    missing_phone = client.post("/api/v1/auth/register", json={
+        "email": "carol@example.com",
+        "password": "CarolPass123",
+        "display_name": "Carol",
+        "gender": "FEMALE",
+        "birthday": "1999-03-15"
+    })
+    assert missing_phone.status_code == 400
+    assert "Phone" in missing_phone.get_json()["message"]
+
+    bad_phone = client.post("/api/v1/auth/register", json={
+        "email": "carol@example.com",
+        "password": "CarolPass123",
+        "display_name": "Carol",
+        "phone": "123",
+        "gender": "FEMALE",
+        "birthday": "1999-03-15"
+    })
+    assert bad_phone.status_code == 400
+
+    # Missing / invalid gender
+    bad_gender = client.post("/api/v1/auth/register", json={
+        "email": "carol@example.com",
+        "password": "CarolPass123",
+        "display_name": "Carol",
+        "phone": "0988777666",
+        "gender": "UNKNOWN_GENDER",
+        "birthday": "1999-03-15"
+    })
+    assert bad_gender.status_code == 400
+    assert "gender" in bad_gender.get_json()["message"].lower()
+
+    # Missing / invalid / future birthday
+    bad_bday = client.post("/api/v1/auth/register", json={
+        "email": "carol@example.com",
+        "password": "CarolPass123",
+        "display_name": "Carol",
+        "phone": "0988777666",
+        "gender": "FEMALE",
+        "birthday": "1999/03/15"
+    })
+    assert bad_bday.status_code == 400
+    assert "birthday" in bad_bday.get_json()["message"].lower()
+
+    future_bday = client.post("/api/v1/auth/register", json={
+        "email": "carol@example.com",
+        "password": "CarolPass123",
+        "display_name": "Carol",
+        "phone": "0988777666",
+        "gender": "FEMALE",
+        "birthday": "2099-01-01"
+    })
+    assert future_bday.status_code == 400
+
+    # Successful registration with phone, gender, birthday
     reg = client.post("/api/v1/auth/register", json={
         "email": "carol@example.com",
         "password": "CarolPass123",
-        "display_name": "Carol"
+        "display_name": "Carol",
+        "phone": "0988777666",
+        "gender": "FEMALE",
+        "birthday": "1999-03-15"
     })
     assert reg.status_code == 201
     reg_data = reg.get_json()["data"]
     assert reg_data["role"] == "MEMBER"
+    assert reg_data["phone"] == "0988777666"
+    assert reg_data["gender"] == "FEMALE"
+    assert reg_data["birthday"] == "1999-03-15"
     assert reg_data["token"]
 
     # Login failure does not leak account existence
@@ -135,11 +205,24 @@ def test_member_profile_and_password_update(client, seed_member_test_data):
 
     me = client.get("/api/v1/me", headers=headers)
     assert me.status_code == 200
-    assert me.get_json()["data"]["display_name"] == "Alice"
+    me_data = me.get_json()["data"]
+    assert me_data["display_name"] == "Alice"
+    assert me_data["phone"] == "0912345678"
+    assert me_data["gender"] == "FEMALE"
+    assert me_data["birthday"] == "1997-05-20"
 
-    upd = client.patch("/api/v1/me", json={"display_name": "Alice Lin"}, headers=headers)
+    upd = client.patch("/api/v1/me", json={
+        "display_name": "Alice Lin",
+        "phone": "0933444555",
+        "gender": "OTHER",
+        "birthday": "1997-06-21"
+    }, headers=headers)
     assert upd.status_code == 200
-    assert upd.get_json()["data"]["display_name"] == "Alice Lin"
+    upd_data = upd.get_json()["data"]
+    assert upd_data["display_name"] == "Alice Lin"
+    assert upd_data["phone"] == "0933444555"
+    assert upd_data["gender"] == "OTHER"
+    assert upd_data["birthday"] == "1997-06-21"
 
 def test_member_reservation_and_order_history_with_privacy(client, seed_member_test_data):
     """REQ-011 & REQ-015: 會員預約/預點餐/現場點餐自動關聯 user_id 與隱私隔離"""

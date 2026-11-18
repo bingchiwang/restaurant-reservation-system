@@ -53,8 +53,13 @@ export default function ReservationScreen({ onBookingSuccess }) {
   const { token, user, isLoggedIn } = useAuth();
 
   useEffect(() => {
-    if (isLoggedIn && user?.display_name && !guestName) {
-      setGuestName(user.display_name);
+    if (isLoggedIn && user) {
+      if (user.display_name && !guestName) {
+        setGuestName(user.display_name);
+      }
+      if (user.phone && !guestPhone) {
+        setGuestPhone(user.phone);
+      }
     }
   }, [isLoggedIn, user]);
 

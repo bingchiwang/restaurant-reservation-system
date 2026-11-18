@@ -49,10 +49,17 @@ export const MemberAPI = {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),
-  register: (email, password, displayName) =>
+  register: (email, password, displayName, phone, gender, birthday) =>
     request("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, display_name: displayName })
+      body: JSON.stringify({
+        email,
+        password,
+        display_name: displayName,
+        phone,
+        gender,
+        birthday
+      })
     }),
   logout: () =>
     request("/auth/logout", {

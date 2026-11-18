@@ -74,8 +74,8 @@ export function AuthProvider({ children }) {
     throw new Error('登入失敗');
   };
 
-  const register = async (email, password, displayName) => {
-    const res = await MemberAPI.register(email, password, displayName);
+  const register = async (email, password, displayName, phone, gender, birthday) => {
+    const res = await MemberAPI.register(email, password, displayName, phone, gender, birthday);
     if (res.success && res.data) {
       if (res.data.token) {
         writeStoredToken(res.data.token);
@@ -84,6 +84,9 @@ export function AuthProvider({ children }) {
           user_id: res.data.user_id,
           email: res.data.email,
           display_name: res.data.display_name,
+          phone: res.data.phone || phone,
+          gender: res.data.gender || gender,
+          birthday: res.data.birthday || birthday,
           role: res.data.role
         });
       }

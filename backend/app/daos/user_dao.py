@@ -7,7 +7,7 @@ class UserDAO:
     def get_by_email(self, email: str):
         with get_db_cursor(self.conn) as cursor:
             cursor.execute("""
-                SELECT user_id, email, password_hash, display_name, role, status, created_at, updated_at
+                SELECT user_id, email, password_hash, display_name, phone, gender, birthday, role, status, created_at, updated_at
                 FROM users
                 WHERE email = ?
             """, (email.strip().lower(),))
@@ -17,24 +17,34 @@ class UserDAO:
     def get_by_id(self, user_id: int):
         with get_db_cursor(self.conn) as cursor:
             cursor.execute("""
-                SELECT user_id, email, password_hash, display_name, role, status, created_at, updated_at
+                SELECT user_id, email, password_hash, display_name, phone, gender, birthday, role, status, created_at, updated_at
                 FROM users
                 WHERE user_id = ?
             """, (user_id,))
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    def create_user(self, email: str, password_hash: str, display_name: str, role: str = "MEMBER", status: str = "ACTIVE"):
+    def create_user(
+        self,
+        email: str,
+        password_hash: str,
+        display_name: str,
+        phone: str = None,
+        gender: str = None,
+        birthday: str = None,
+        role: str = "MEMBER",
+        status: str = "ACTIVE",
+    ):
         with get_db_cursor(self.conn, commit=True) as cursor:
             cursor.execute("""
-                INSERT INTO users (email, password_hash, display_name, role, status)
-                VALUES (?, ?, ?, ?, ?)
-            """, (email.strip().lower(), password_hash, display_name, role, status))
+                INSERT INTO users (email, password_hash, display_name, phone, gender, birthday, role, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (email.strip().lower(), password_hash, display_name, phone, gender, birthday, role, status))
             return cursor.lastrowid
 
     def update_user(self, user_id: int, fields: dict):
-        """Updates allowed user profile fields (display_name, password_hash)."""
-        allowed = {"display_name", "password_hash"}
+        """Updates allowed user profile fields (display_name, phone, gender, birthday, password_hash)."""
+        allowed = {"display_name", "phone", "gender", "birthday", "password_hash"}
         update_cols = []
         params = []
         for k, v in fields.items():
